@@ -2,7 +2,6 @@ package queue
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -53,21 +52,13 @@ func (c *Consumer) Consume(ctx context.Context) error {
 	return c.c.Consume(ctx, c.handler)
 }
 
+// Handler passed to the queue consumer implemenation to wrap metrics and error handling.
 func (c *Consumer) handler(ctx context.Context, payload []byte) error {
-	// ctx, span := tracing.NewSpan(
-	// 	ctx,
-	// 	"HandleTask",
-	// 	trace.WithAttributes(attribute.String("task", task.Type())),
-	// 	trace.WithSpanKind(trace.SpanKindConsumer),
-	// )
-	// defer span.End()
-
-	// labels := prometheus.Labels{"task": task.Type()}
-
 	job := job{}
-	if err := json.Unmarshal(payload, &job); err != nil {
+	if err := Unmarshal(payload, &job); err != nil {
 		return fmt.Errorf("failed to unmarshal job: %w", err)
 	}
+
 	start := time.Now()
 	handler, ok := c.handlers[job.Task]
 	if !ok {
@@ -77,7 +68,6 @@ func (c *Consumer) handler(ctx context.Context, payload []byte) error {
 	}
 
 	err := handler(ctx, job.Payload)
-
 	if err != nil {
 		c.obs.observeError(ctx, job.Task, start, err)
 		return err

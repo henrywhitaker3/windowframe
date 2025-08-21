@@ -1,4 +1,4 @@
-package queue
+package asynq
 
 import (
 	"context"
@@ -14,8 +14,7 @@ import (
 )
 
 type Consumer struct {
-	server    *asynq.Server
-	inspector *asynq.Inspector
+	server *asynq.Server
 }
 
 type ConsumerOpts struct {
@@ -23,6 +22,8 @@ type ConsumerOpts struct {
 	Redis  RedisOpts
 	// The number of concurrent jobs the worker processes (default: num cpu)
 	Concurrency int
+
+	Logger *slog.Logger
 }
 
 type RedisOpts struct {
@@ -40,7 +41,7 @@ func (r RedisOpts) Client() redis.UniversalClient {
 	})
 
 	if r.OtelEnabled {
-		redisotel.InstrumentTracing(client, redisotel.WithDBStatement(true))
+		_ = redisotel.InstrumentTracing(client, redisotel.WithDBStatement(true))
 	}
 
 	return client
@@ -49,7 +50,6 @@ func (r RedisOpts) Client() redis.UniversalClient {
 func NewConsumer(ctx context.Context, opts ConsumerOpts) (*Consumer, error) {
 	queues := map[string]int{}
 	for _, queue := range opts.Queues {
-		slog.Debug("consuming from queue", "queue", queue)
 		queues[string(queue)] = 9
 	}
 	if opts.Concurrency == 0 {
@@ -61,21 +61,17 @@ func NewConsumer(ctx context.Context, opts ConsumerOpts) (*Consumer, error) {
 			Concurrency: opts.Concurrency,
 			BaseContext: func() context.Context { return ctx },
 			Queues:      queues,
+			Logger: &asynqLogger{
+				log: opts.Logger,
+			},
 		},
 	)
 	if err := srv.Ping(); err != nil {
 		return nil, err
 	}
 
-	inspector := asynq.NewInspector(asynq.RedisClientOpt{
-		Addr:     opts.Redis.Addr,
-		Password: opts.Redis.Password,
-		DB:       opts.Redis.DB,
-	})
-
 	return &Consumer{
-		server:    srv,
-		inspector: inspector,
+		server: srv,
 	}, nil
 }
 

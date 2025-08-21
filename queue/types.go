@@ -1,3 +1,4 @@
+// Package queue
 package queue
 
 import (
@@ -21,7 +22,7 @@ type job struct {
 }
 
 func newJob(task Task, payload any) (job, error) {
-	by, err := json.Marshal(payload)
+	by, err := Marshal(payload)
 	if err != nil {
 		return job{}, fmt.Errorf("marshal job payload: %w", err)
 	}
@@ -30,4 +31,12 @@ func newJob(task Task, payload any) (job, error) {
 		CreatedAt: time.Now().UTC(),
 		Payload:   by,
 	}, nil
+}
+
+func Marshal(d any) ([]byte, error) {
+	return json.Marshal(d)
+}
+
+func Unmarshal(d []byte, out any) error {
+	return json.Unmarshal(d, out)
 }

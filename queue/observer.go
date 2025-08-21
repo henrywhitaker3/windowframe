@@ -13,6 +13,9 @@ type Observer struct {
 	jobsErrors           *prometheus.CounterVec
 	jobsProcessedSeconds prometheus.HistogramVec
 
+	jobsPushed       *prometheus.CounterVec
+	jobsPushedErrors *prometheus.CounterVec
+
 	logger *slog.Logger
 }
 
@@ -35,6 +38,14 @@ func NewObserver(opts ObserverOpts) *Observer {
 			Name: "queue_consumer_job_errors_total",
 			Help: "The number of errors when processing jobs",
 		}, []string{"task"}),
+		jobsPushed: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "queue_producer_jobs_pushed_total",
+			Help: "The number of jobs pushed to the queue",
+		}, []string{"queue", "task"}),
+		jobsPushedErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "queue_producer_job_push_errors_total",
+			Help: "The number of errors pushing a job to the queue",
+		}, []string{"queue", "task"}),
 		logger: opts.Logger,
 	}
 
@@ -42,6 +53,8 @@ func NewObserver(opts ObserverOpts) *Observer {
 		_ = opts.Reg.Register(o.jobsProcessed)
 		_ = opts.Reg.Register(o.jobsProcessedSeconds)
 		_ = opts.Reg.Register(o.jobsErrors)
+		_ = opts.Reg.Register(o.jobsPushed)
+		_ = opts.Reg.Register(o.jobsPushedErrors)
 	}
 
 	return o
@@ -64,4 +77,34 @@ func (o *Observer) observeError(ctx context.Context, t Task, start time.Time, er
 	o.jobsProcessed.WithLabelValues(string(t)).Inc()
 	o.jobsErrors.WithLabelValues(string(t)).Inc()
 	o.jobsProcessedSeconds.WithLabelValues(string(t)).Observe(dur.Seconds())
+}
+
+func (o *Observer) observerJobPushed(ctx context.Context, is Task, opts []Option) {
+	if o.logger != nil {
+		o.logger.DebugContext(
+			ctx,
+			"job pushed",
+			"queue",
+			QueueFromOptions(opts),
+			"task",
+			is,
+			"options",
+			opts,
+		)
+	}
+}
+
+func (o *Observer) observerJobPushedError(ctx context.Context, is Task, opts []Option, err error) {
+	if o.logger != nil {
+		o.logger.ErrorContext(
+			ctx,
+			"job push failed",
+			"queue",
+			QueueFromOptions(opts),
+			"task",
+			is,
+			"error",
+			err,
+		)
+	}
 }

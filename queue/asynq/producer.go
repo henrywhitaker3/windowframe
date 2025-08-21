@@ -1,16 +1,12 @@
-package queue
+// Package asynq
+package asynq
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+	"time"
 
-	"github.com/henrywhitaker3/go-template/internal/metrics"
-	"github.com/henrywhitaker3/go-template/internal/tracing"
+	"github.com/henrywhitaker3/windowframe/queue"
 	"github.com/hibiken/asynq"
-	"github.com/prometheus/client_golang/prometheus"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type Publisher struct {
@@ -30,29 +26,36 @@ func NewPublisher(opts PublisherOpts) (*Publisher, error) {
 	return &Publisher{client: client}, nil
 }
 
-// Push a task in the queue
-func (p *Publisher) Push(ctx context.Context, kind Task, payload any, opts ...asynq.Option) error {
-	ctx, span := tracing.NewSpan(
+func (p *Publisher) Push(
+	ctx context.Context,
+	kind queue.Task,
+	payload []byte,
+	opts ...queue.Option,
+) error {
+	task := asynq.NewTask(string(kind), payload, asynqOptsFromQueueOpts(opts)...)
+	_, err := p.client.EnqueueContext(
 		ctx,
-		"PushToQueue",
-		trace.WithAttributes(attribute.String("task", string(kind))),
-		trace.WithSpanKind(trace.SpanKindProducer),
+		task,
+		asynq.Queue(string(queue.QueueFromOptions(opts))),
 	)
-	defer span.End()
-	by, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("failed to marshal task payload: %w", err)
-	}
-	task := asynq.NewTask(string(kind), by, opts...)
-
-	queue := mapTaskToQueue(kind)
-
-	span.SetAttributes(attribute.String("queue", string(queue)))
-	labels := prometheus.Labels{"queue": string(queue), "task": string(kind)}
-	if _, err = p.client.EnqueueContext(ctx, task, asynq.Queue(string(queue))); err != nil {
-		metrics.QueueTasksPushFailures.With(labels).Inc()
-	}
-	metrics.QueueTasksPushed.With(labels).Inc()
-
 	return err
+}
+
+func (p *Publisher) Close(ctx context.Context) error {
+	return p.client.Close()
+}
+
+func asynqOptsFromQueueOpts(opts []queue.Option) []asynq.Option {
+	out := []asynq.Option{}
+	for _, opt := range opts {
+		switch opt.Type() {
+		case queue.AtOpt:
+			out = append(out, asynq.ProcessAt(opt.Value().(time.Time)))
+		case queue.AfterOpt:
+			out = append(out, asynq.ProcessIn(opt.Value().(time.Duration)))
+		case queue.IDOpt:
+			out = append(out, asynq.TaskID(opt.Value().(string)))
+		}
+	}
+	return out
 }
