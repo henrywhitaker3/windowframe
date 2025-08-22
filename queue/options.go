@@ -12,6 +12,7 @@ const (
 	AtOpt
 	AfterOpt
 	IDOpt
+	MaxTriesOpt
 )
 
 type Option interface {
@@ -24,6 +25,7 @@ type (
 	atOption    time.Time
 	afterOption time.Duration
 	iDOption    string
+	maxTriesOpt int
 )
 
 func (o Queue) Type() OptionType {
@@ -80,6 +82,20 @@ func (i iDOption) Value() any {
 
 func WithID(id string) Option {
 	return iDOption(id)
+}
+
+func (m maxTriesOpt) Type() OptionType {
+	return MaxTriesOpt
+}
+func (m maxTriesOpt) String() string {
+	return fmt.Sprintf("MaxTries(%d)", int(m))
+}
+func (m maxTriesOpt) Value() any {
+	return int(m)
+}
+
+func WithMaxTries(tries int) Option {
+	return maxTriesOpt(tries)
 }
 
 func QueueFromOptions(opts []Option) Queue {

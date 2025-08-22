@@ -54,3 +54,7 @@ func (p *Producer) Push(
 	p.obs.observerJobPushed(ctx, is, opts)
 	return nil
 }
+
+func (p *Producer) Close(ctx context.Context) error {
+	return p.p.Close(ctx)
+}

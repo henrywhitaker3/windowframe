@@ -55,6 +55,8 @@ func asynqOptsFromQueueOpts(opts []queue.Option) []asynq.Option {
 			out = append(out, asynq.ProcessIn(opt.Value().(time.Duration)))
 		case queue.IDOpt:
 			out = append(out, asynq.TaskID(opt.Value().(string)))
+		case queue.MaxTriesOpt:
+			out = append(out, asynq.MaxRetry(opt.Value().(int)))
 		}
 	}
 	return out
