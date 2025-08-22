@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/henrywhitaker3/windowframe/queue"
+	"github.com/henrywhitaker3/windowframe/queue/asynq"
 	"github.com/henrywhitaker3/windowframe/queue/nats"
 	"github.com/henrywhitaker3/windowframe/test"
 	"github.com/nats-io/nats.go/jetstream"
@@ -21,8 +22,8 @@ const (
 )
 
 func TestItProducesAndConsumesJobs(t *testing.T) {
-	// redis, cancel := test.Redis(t)
-	// defer cancel()
+	redis, cancel := test.Redis(t)
+	defer cancel()
 
 	natsURL, cancel := test.Nats(t)
 	defer cancel()
@@ -42,29 +43,29 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 		errored      int
 		deadlettered int
 	}{
-		// {
-		// 	name: "asynq",
-		// 	consumer: func(t *testing.T) queue.QueueConsumer {
-		// 		cons, err := asynq.NewConsumer(context.TODO(), asynq.ConsumerOpts{
-		// 			Queues: []queue.Queue{DemoQueue},
-		// 			Redis: asynq.RedisOpts{
-		// 				Addr: fmt.Sprintf("127.0.0.1:%d", redis),
-		// 			},
-		// 			Logger: test.NewLogger(t),
-		// 		})
-		// 		require.Nil(t, err)
-		// 		return cons
-		// 	},
-		// 	producer: func(t *testing.T) queue.QueueProducer {
-		// 		prod, err := asynq.NewPublisher(asynq.PublisherOpts{
-		// 			Redis: asynq.RedisOpts{
-		// 				Addr: fmt.Sprintf("127.0.0.1:%d", redis),
-		// 			},
-		// 		})
-		// 		require.Nil(t, err)
-		// 		return prod
-		// 	},
-		// },
+		{
+			name: "asynq",
+			consumer: func(t *testing.T) queue.QueueConsumer {
+				cons, err := asynq.NewConsumer(context.TODO(), asynq.ConsumerOpts{
+					Queues: []queue.Queue{DemoQueue},
+					Redis: asynq.RedisOpts{
+						Addr: fmt.Sprintf("127.0.0.1:%d", redis),
+					},
+					Logger: test.NewLogger(t),
+				})
+				require.Nil(t, err)
+				return cons
+			},
+			producer: func(t *testing.T) queue.QueueProducer {
+				prod, err := asynq.NewPublisher(asynq.PublisherOpts{
+					Redis: asynq.RedisOpts{
+						Addr: fmt.Sprintf("127.0.0.1:%d", redis),
+					},
+				})
+				require.Nil(t, err)
+				return prod
+			},
+		},
 		{
 			name: "nats",
 			consumer: func(t *testing.T) queue.QueueConsumer {
