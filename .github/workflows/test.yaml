@@ -22,7 +22,6 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go mod download
-      - run: go build main.go
 
   unit:
     runs-on: ubuntu-latest
