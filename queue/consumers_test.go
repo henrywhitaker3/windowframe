@@ -11,6 +11,7 @@ import (
 	"github.com/henrywhitaker3/windowframe/queue"
 	"github.com/henrywhitaker3/windowframe/queue/nats"
 	"github.com/henrywhitaker3/windowframe/test"
+	"github.com/nats-io/nats.go/jetstream"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,6 +23,15 @@ const (
 func TestItProducesAndConsumesJobs(t *testing.T) {
 	// redis, cancel := test.Redis(t)
 	// defer cancel()
+
+	natsURL, cancel := test.Nats(t)
+	defer cancel()
+
+	test.NatsStream(t, natsURL, jetstream.StreamConfig{
+		Name:      "demo",
+		Retention: jetstream.WorkQueuePolicy,
+		Subjects:  []string{"demo.>"},
+	})
 
 	tcs := []struct {
 		name         string
@@ -59,16 +69,15 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 			name: "nats",
 			consumer: func(t *testing.T) queue.QueueConsumer {
 				cons, err := nats.NewConsumer(nats.ConsumerOpts{
-					URL:        "10.0.0.39:4222",
+					URL:        natsURL,
 					StreamName: "demo",
-					Queue:      DemoQueue,
 				})
 				require.Nil(t, err)
 				return cons
 			},
 			producer: func(t *testing.T) queue.QueueProducer {
 				prod, err := nats.NewProducer(nats.ProducerOpts{
-					URL: "10.0.0.39:4222",
+					URL: natsURL,
 				})
 				require.Nil(t, err)
 				return prod
