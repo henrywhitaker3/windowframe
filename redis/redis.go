@@ -42,8 +42,6 @@ func New(ctx context.Context, opts RedisOpts) (rueidis.Client, error) {
 	return client, err
 }
 
-// Does a write to redis every second to check we can write, if it can't it marks the
-// the app as unhealthy
 func CheckCanWrite(ctx context.Context, client rueidis.Client, f func(status bool)) {
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
