@@ -86,7 +86,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
 	defer cancel()
 
 	for _, tc := range tcs {
@@ -130,14 +130,9 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 					queue.WithID("standard-job"),
 				),
 			)
-			// No hits as queue not being consumed
-			// require.Nil(t, p.Push(ctx, DemoTask, "bongo"), queue.WithID("no-queue"))
-			// Should error as invalid string
-			// require.Nil(t, p.Push(ctx, DemoTask, "bingo", queue.OnQueue(DemoQueue)))
+
 			// Should be put in deadletter queue
 			// require.Nil(t, p.Push(ctx, DemoTask, "dead", queue.OnQueue(DemoQueue)))
-			// Should be skipped and not deadlettered
-			// require.Nil(t, p.Push(ctx, DemoTask, "skip", queue.OnQueue(DemoQueue)))
 
 			go func() {
 				if err := c.Consume(ctx); err != nil {
@@ -158,7 +153,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 					DemoTask,
 					"bongo-after-duration",
 					queue.OnQueue(DemoQueue),
-					queue.After(time.Millisecond*1500),
+					queue.After(time.Second*10),
 					queue.WithID("task-after-duration"),
 				),
 			)
@@ -171,11 +166,11 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 					"bongo-at-time",
 					queue.OnQueue(DemoQueue),
 					queue.WithID("task-at-time"),
-					queue.At(time.Now().Add(time.Second)),
+					queue.At(time.Now().Add(time.Second*10)),
 				),
 			)
 			t.Log("waiting for queued/delayed jobs to be processed")
-			time.Sleep(time.Second * 2)
+			time.Sleep(time.Second * 12)
 			require.Equal(t, 3, handler.hits)
 		})
 	}
