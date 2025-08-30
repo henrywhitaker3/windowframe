@@ -14,7 +14,7 @@ type Migrator struct {
 	m *migrate.Migrate
 }
 
-func NewMigrator(files fs.FS, string, db *sql.DB) (*Migrator, error) {
+func NewMigrator(files fs.FS, db *sql.DB) (*Migrator, error) {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return nil, err
