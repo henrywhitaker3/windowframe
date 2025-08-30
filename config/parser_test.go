@@ -17,6 +17,9 @@ type DummyConfig struct {
 	SomeFloat32  float32       `                                             flag:"some-float-32"`
 	SomeFloat64  float64       `                                             flag:"some-float-64"`
 	SomeDuration time.Duration `                                             flag:"some-duration"`
+	SomeStruct   struct {
+		NestedInt int `flag:"nested-int"`
+	}
 }
 
 func TestItParsesMultipleExtractors(t *testing.T) {

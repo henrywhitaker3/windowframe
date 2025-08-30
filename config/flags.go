@@ -27,22 +27,31 @@ func (p PFlagExtractor[T]) Extract(conf *T) error {
 		ref = ref.Elem()
 	}
 
-	if err := processItem(p.flags, ref, conf); err != nil {
+	actual := reflect.ValueOf(conf).Elem()
+	if err := processItem(p.flags, ref, actual, conf); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func processItem[T any](flags *pflag.FlagSet, ref reflect.Value, conf *T) error {
+func processItem[T any](
+	flags *pflag.FlagSet,
+	ref reflect.Value,
+	actual reflect.Value,
+	conf *T,
+) error {
 	t := ref.Type()
-
-	actual := reflect.ValueOf(conf).Elem()
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		if field.Type.Kind() == reflect.Struct {
-			if err := processItem(flags, ref.FieldByName(field.Name), conf); err != nil {
+			if err := processItem(
+				flags,
+				ref.FieldByName(field.Name),
+				actual.FieldByName(field.Name),
+				conf,
+			); err != nil {
 				return err
 			}
 		}

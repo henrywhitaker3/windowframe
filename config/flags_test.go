@@ -19,6 +19,7 @@ func TestItParsesPFlag(t *testing.T) {
 	set.Float32("some-float-32", 0, "A float32 flag")
 	set.Float64("some-float-64", 0, "A float64 flag")
 	set.Duration("some-duration", 0, "A duration flag")
+	set.Int("nested-int", 0, "A nested int flag")
 	require.Nil(t, set.Parse([]string{
 		"--some-field", "bongo",
 		"--some-int", "6",
@@ -29,6 +30,7 @@ func TestItParsesPFlag(t *testing.T) {
 		"--some-float-32", "1.1",
 		"--some-float-64", "1.2",
 		"--some-duration", "1s",
+		"--nested-int", "5",
 	}))
 
 	e := NewPFlagExtractor[DummyConfig](set)
@@ -43,6 +45,7 @@ func TestItParsesPFlag(t *testing.T) {
 	require.Equal(t, float32(1.1), conf.SomeFloat32)
 	require.Equal(t, float64(1.2), conf.SomeFloat64)
 	require.Equal(t, time.Second, conf.SomeDuration)
+	require.Equal(t, 5, conf.SomeStruct.NestedInt)
 }
 
 func TestItErrorsWhenPfldagsNotParsedYet(t *testing.T) {
