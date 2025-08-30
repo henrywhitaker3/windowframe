@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/henrywhitaker3/windowframe/tracing"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -41,7 +42,12 @@ func (p *Producer) Push(
 	payload any,
 	opts ...Option,
 ) error {
-	ctx, span := tracing.NewSpan(ctx, "PushTask", trace.WithSpanKind(trace.SpanKindConsumer))
+	ctx, span := tracing.NewSpan(
+		ctx,
+		"PushTask",
+		trace.WithSpanKind(trace.SpanKindConsumer),
+		trace.WithAttributes(attribute.String("task", string(is))),
+	)
 	defer span.End()
 
 	job, err := newJob(is, payload)
