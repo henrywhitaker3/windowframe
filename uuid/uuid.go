@@ -6,12 +6,20 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type UUID uuid.UUID
 
 func (u UUID) UUID() uuid.UUID {
 	return uuid.UUID(u)
+}
+
+func (u UUID) PgUUID() pgtype.UUID {
+	return pgtype.UUID{
+		Bytes: [16]byte(u),
+		Valid: true,
+	}
 }
 
 func (u UUID) MarshalJSON() ([]byte, error) {
