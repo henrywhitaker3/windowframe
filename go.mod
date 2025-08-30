@@ -18,6 +18,7 @@ require (
 	github.com/redis/go-redis/extra/redisotel/v9 v9.12.1
 	github.com/redis/go-redis/v9 v9.12.1
 	github.com/redis/rueidis v1.0.64
+	github.com/redis/rueidis/rueidisotel v1.0.64
 	github.com/sethvargo/go-envconfig v1.3.0
 	github.com/spf13/pflag v1.0.7
 	github.com/stretchr/testify v1.11.1
@@ -96,7 +97,6 @@ require (
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.28.0 // indirect
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
