@@ -17,18 +17,18 @@ type QueueProducer interface {
 type Producer struct {
 	p QueueProducer
 
-	obs *Observer
+	obs *ProducerObserver
 }
 
 type ProducerOpts struct {
 	Producer QueueProducer
-	Observer *Observer
+	Observer *ProducerObserver
 }
 
 func NewProducer(opts ProducerOpts) *Producer {
 	obs := opts.Observer
 	if obs == nil {
-		obs = NewObserver(ObserverOpts{})
+		obs = NewProducerObserver(ProducerObserverOpts{})
 	}
 	return &Producer{
 		p:   opts.Producer,
