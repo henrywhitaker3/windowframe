@@ -19,8 +19,9 @@ func NewParser[T any]() Parser[T] {
 	}
 }
 
-func (p *Parser[T]) WithExtractors(e ...Extractor[T]) {
+func (p *Parser[T]) WithExtractors(e ...Extractor[T]) *Parser[T] {
 	p.extractors = append(p.extractors, e...)
+	return p
 }
 
 func (p Parser[T]) Parse() (T, error) {
