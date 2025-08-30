@@ -10,7 +10,7 @@ import (
 	"github.com/XSAM/otelsql"
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 func Open(ctx context.Context, url string, tracingEnabled bool) (*sql.DB, error) {
@@ -62,4 +62,9 @@ func OpenPgx(ctx context.Context, url string, tracingEnabled bool) (*pgxpool.Poo
 	}
 
 	return conn, nil
+}
+
+func OpenStd(pool *pgxpool.Pool) (*sql.DB, error) {
+	db := stdlib.OpenDBFromPool(pool)
+	return db, nil
 }
