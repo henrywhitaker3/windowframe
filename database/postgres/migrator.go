@@ -3,23 +3,23 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"io/fs"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	"github.com/henrywhitaker3/go-template/database/migrations"
 )
 
 type Migrator struct {
 	m *migrate.Migrate
 }
 
-func NewMigrator(db *sql.DB) (*Migrator, error) {
+func NewMigrator(files fs.FS, string, db *sql.DB) (*Migrator, error) {
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {
 		return nil, err
 	}
-	fs, err := iofs.New(migrations.Migrations, "files")
+	fs, err := iofs.New(files, "files")
 	if err != nil {
 		return nil, err
 	}
