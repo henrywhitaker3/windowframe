@@ -9,24 +9,24 @@ import (
 	"github.com/hibiken/asynq"
 )
 
-type Publisher struct {
+type Producer struct {
 	client *asynq.Client
 }
 
-type PublisherOpts struct {
+type ProducerOpts struct {
 	Redis RedisOpts
 }
 
-func NewPublisher(opts PublisherOpts) (*Publisher, error) {
+func NewProducer(opts ProducerOpts) (*Producer, error) {
 	client := asynq.NewClientFromRedisClient(opts.Redis.Client())
 	if err := client.Ping(); err != nil {
 		return nil, err
 	}
 
-	return &Publisher{client: client}, nil
+	return &Producer{client: client}, nil
 }
 
-func (p *Publisher) Push(
+func (p *Producer) Push(
 	ctx context.Context,
 	kind queue.Task,
 	payload []byte,
@@ -41,7 +41,7 @@ func (p *Publisher) Push(
 	return err
 }
 
-func (p *Publisher) Close(ctx context.Context) error {
+func (p *Producer) Close(ctx context.Context) error {
 	return p.client.Close()
 }
 

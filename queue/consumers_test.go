@@ -13,6 +13,7 @@ import (
 	"github.com/henrywhitaker3/windowframe/queue/nats"
 	"github.com/henrywhitaker3/windowframe/test"
 	"github.com/nats-io/nats.go/jetstream"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,7 +58,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 				return cons
 			},
 			producer: func(t *testing.T) queue.QueueProducer {
-				prod, err := asynq.NewPublisher(asynq.PublisherOpts{
+				prod, err := asynq.NewProducer(asynq.ProducerOpts{
 					Redis: asynq.RedisOpts{
 						Addr: fmt.Sprintf("127.0.0.1:%d", redis),
 					},
@@ -91,22 +92,25 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
+			reg := prometheus.NewRegistry()
+			obs := queue.NewObserver(queue.ObserverOpts{
+				Logger: test.NewLogger(t),
+				Reg:    reg,
+			})
 			c := queue.NewConsumer(queue.ConsumerOpts{
 				Consumer: tc.consumer(t),
-				Observer: queue.NewObserver(queue.ObserverOpts{
-					Logger: test.NewLogger(t),
-				}),
+				Observer: obs,
 			})
 			p := queue.NewProducer(queue.ProducerOpts{
 				Producer: tc.producer(t),
-				Observer: queue.NewObserver(queue.ObserverOpts{
-					Logger: test.NewLogger(t),
-				}),
+				Observer: obs,
 			})
 
 			handler := &fakeHandler{mu: &sync.Mutex{}, t: t}
 
 			c.RegisterHandler(DemoTask, handler.Handler)
+
+			assertProcessed(t, obs, 0)
 
 			// No hits as no handler registered
 			require.Nil(
@@ -132,7 +136,9 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 			)
 
 			// Should be put in deadletter queue
-			// require.Nil(t, p.Push(ctx, DemoTask, "dead", queue.OnQueue(DemoQueue)))
+			require.Nil(t, p.Push(ctx, DemoTask, "dead", queue.OnQueue(DemoQueue)))
+			// Should error and be skipped
+			require.Nil(t, p.Push(ctx, DemoTask, "skip", queue.OnQueue(DemoQueue)))
 
 			go func() {
 				if err := c.Consume(ctx); err != nil {
@@ -143,7 +149,10 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 
 			t.Log("waiting for initial processing")
 			time.Sleep(time.Second * 5)
-			require.Equal(t, 1, handler.hits)
+
+			assertProcessed(t, obs, 3)
+			assertDeadlettered(t, obs, 1)
+			assertSkipped(t, obs, 1)
 
 			// Should register a hit after another second wait
 			require.Nil(
@@ -171,9 +180,24 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 			)
 			t.Log("waiting for queued/delayed jobs to be processed")
 			time.Sleep(time.Second * 12)
-			require.Equal(t, 3, handler.hits)
+			assertProcessed(t, obs, 5)
 		})
 	}
+}
+
+func assertProcessed(t *testing.T, obs *queue.Observer, value float64) {
+	processed := test.GetCounterValue(t, obs.JobsProcessed.WithLabelValues(string(DemoTask)))
+	require.Equal(t, value, processed)
+}
+
+func assertDeadlettered(t *testing.T, obs *queue.Observer, value float64) {
+	processed := test.GetCounterValue(t, obs.JobsDeadlettered.WithLabelValues(string(DemoTask)))
+	require.Equal(t, value, processed)
+}
+
+func assertSkipped(t *testing.T, obs *queue.Observer, value float64) {
+	processed := test.GetCounterValue(t, obs.JobsSkipped.WithLabelValues(string(DemoTask)))
+	require.Equal(t, value, processed)
 }
 
 type fakeHandler struct {
