@@ -3,6 +3,9 @@ package queue
 import (
 	"context"
 	"fmt"
+
+	"github.com/henrywhitaker3/windowframe/tracing"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type QueueProducer interface {
@@ -38,6 +41,9 @@ func (p *Producer) Push(
 	payload any,
 	opts ...Option,
 ) error {
+	ctx, span := tracing.NewSpan(ctx, "PushTask", trace.WithSpanKind(trace.SpanKindConsumer))
+	defer span.End()
+
 	job, err := newJob(is, payload)
 	if err != nil {
 		return fmt.Errorf("create job payload: %w", err)
