@@ -6,7 +6,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/henrywhitaker3/windowframe/tracing"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Message struct {
@@ -54,10 +57,14 @@ func (c *Consumer) Consume(ctx context.Context) error {
 
 // Handler passed to the queue consumer implemenation to wrap metrics and error handling.
 func (c *Consumer) handler(ctx context.Context, payload []byte) error {
+	ctx, span := tracing.NewSpan(ctx, "HandleTask", trace.WithSpanKind(trace.SpanKindConsumer))
+	defer span.End()
+
 	job := job{}
 	if err := Unmarshal(payload, &job); err != nil {
 		return fmt.Errorf("failed to unmarshal job: %w", err)
 	}
+	span.SetAttributes(attribute.String("task", string(job.Task)))
 
 	start := time.Now()
 	handler, ok := c.handlers[job.Task]
