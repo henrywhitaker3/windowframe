@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
+	"sync"
 	"time"
 
 	"github.com/henrywhitaker3/windowframe/queue"
@@ -18,8 +20,7 @@ type ConsumerOpts struct {
 	ConnectOpts   []nats.Option
 	JetStreamOpts []jetstream.JetStreamOpt
 
-	MaxWaiting    int
-	MaxAckPending int
+	Concurrency int
 }
 
 type Consumer struct {
@@ -39,6 +40,10 @@ func NewConsumer(opts ConsumerOpts) (*Consumer, error) {
 		return nil, fmt.Errorf("create js instance: %w", err)
 	}
 
+	if opts.Concurrency == 0 {
+		opts.Concurrency = runtime.NumCPU()
+	}
+
 	return &Consumer{
 		js:   js,
 		opts: opts,
@@ -52,44 +57,62 @@ func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
 	}
 
 	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Name:          c.opts.StreamName,
-		MaxWaiting:    c.opts.MaxWaiting,
-		MaxAckPending: c.opts.MaxAckPending,
+		Name: c.opts.StreamName,
 	})
 	if err != nil {
 		return fmt.Errorf("create or update consumer: %w", err)
 	}
 
-	cctx, err := cons.Consume(func(msg jetstream.Msg) {
-		if untilRaw := msg.Headers().Get(DelayedHeader); untilRaw != "" {
-			t, _ := time.Parse(time.RFC3339, untilRaw)
-			until := time.Until(t)
-			if until > 0 {
-				_ = msg.NakWithDelay(until)
-				return
-			}
-		}
-		if err := h(ctx, msg.Data()); err != nil {
-			if errors.Is(err, queue.ErrSkipRetry) {
-				_ = msg.Term()
-				return
-			}
-			if errors.Is(err, queue.ErrDeadLetter) {
-				// TODO: add deadletter functionality
-				_ = msg.TermWithReason("deadletter")
-				return
-				// panic("deadletter not impleneted in nats consumers")
-			}
-			_ = msg.Nak()
-		}
-		_ = msg.Ack()
-	})
-	if err != nil {
-		return fmt.Errorf("consume message from consumer: %w", err)
-	}
+	pool := make(chan struct{}, c.opts.Concurrency)
+	defer close(pool)
 
-	<-cctx.Closed()
-	return nil
+	wg := &sync.WaitGroup{}
+	defer wg.Wait()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			batch, err := cons.Fetch(c.opts.Concurrency, jetstream.FetchMaxWait(time.Second))
+			if err != nil {
+				time.Sleep(time.Millisecond * 50)
+				continue
+			}
+			for msg := range batch.Messages() {
+				wg.Go(func() {
+					pool <- struct{}{}
+					c.handleMessage(ctx, msg, h)
+					<-pool
+				})
+			}
+		}
+	}
+}
+
+func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, h queue.HandlerFunc) {
+	if untilRaw := msg.Headers().Get(DelayedHeader); untilRaw != "" {
+		t, _ := time.Parse(time.RFC3339, untilRaw)
+		until := time.Until(t)
+		if until > 0 {
+			_ = msg.NakWithDelay(until)
+			return
+		}
+	}
+	if err := h(ctx, msg.Data()); err != nil {
+		if errors.Is(err, queue.ErrSkipRetry) {
+			_ = msg.Term()
+			return
+		}
+		if errors.Is(err, queue.ErrDeadLetter) {
+			// TODO: add deadletter functionality
+			_ = msg.TermWithReason("deadletter")
+			return
+			// panic("deadletter not impleneted in nats consumers")
+		}
+		_ = msg.Nak()
+	}
+	_ = msg.Ack()
 }
 
 func (c *Consumer) Close(ctx context.Context) error {
