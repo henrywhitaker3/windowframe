@@ -4,7 +4,7 @@ go 1.24.4
 
 require (
 	github.com/XSAM/otelsql v0.32.0
-	github.com/brianvoe/gofakeit/v7 v7.0.4
+	github.com/brianvoe/gofakeit/v7 v7.5.0
 	github.com/exaring/otelpgx v0.9.3
 	github.com/go-co-op/gocron/v2 v2.16.4
 	github.com/golang-migrate/migrate/v4 v4.17.1
