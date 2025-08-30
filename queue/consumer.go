@@ -24,7 +24,7 @@ type QueueConsumer interface {
 
 type Consumer struct {
 	c   QueueConsumer
-	obs *Observer
+	obs *ConsumerObserver
 
 	mu        *sync.Mutex
 	handlers  map[Task]HandlerFunc
@@ -33,13 +33,13 @@ type Consumer struct {
 
 type ConsumerOpts struct {
 	Consumer QueueConsumer
-	Observer *Observer
+	Observer *ConsumerObserver
 }
 
 func NewConsumer(opts ConsumerOpts) *Consumer {
 	obs := opts.Observer
 	if obs == nil {
-		obs = NewObserver(ObserverOpts{})
+		obs = NewConsumerObserver(ConsumerObserverOpts{})
 	}
 	return &Consumer{
 		c:         opts.Consumer,

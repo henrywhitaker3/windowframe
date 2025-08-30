@@ -9,26 +9,23 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type Observer struct {
+type ConsumerObserver struct {
 	JobsProcessed        *prometheus.CounterVec
 	JobsErrors           *prometheus.CounterVec
 	JobsProcessedSeconds *prometheus.HistogramVec
 	JobsDeadlettered     *prometheus.CounterVec
 	JobsSkipped          *prometheus.CounterVec
 
-	JobsPushed       *prometheus.CounterVec
-	JobsPushedErrors *prometheus.CounterVec
-
 	logger *slog.Logger
 }
 
-type ObserverOpts struct {
+type ConsumerObserverOpts struct {
 	Logger *slog.Logger
 	Reg    prometheus.Registerer
 }
 
-func NewObserver(opts ObserverOpts) *Observer {
-	o := &Observer{
+func NewConsumerObserver(opts ConsumerObserverOpts) *ConsumerObserver {
+	o := &ConsumerObserver{
 		JobsProcessed: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "queue_consumer_jobs_processed_total",
 			Help: "The number of jobs processed by the consumer",
@@ -49,23 +46,13 @@ func NewObserver(opts ObserverOpts) *Observer {
 			Name: "queue_consumer_jobs_skipped_total",
 			Help: "The number of jobs that failed and were skipped/removed from the queue",
 		}, []string{"task"}),
-		JobsPushed: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "queue_producer_jobs_pushed_total",
-			Help: "The number of jobs pushed to the queue",
-		}, []string{"queue", "task"}),
-		JobsPushedErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Name: "queue_producer_job_push_errors_total",
-			Help: "The number of errors pushing a job to the queue",
-		}, []string{"queue", "task"}),
 		logger: opts.Logger,
 	}
 
 	if opts.Reg != nil {
-		_ = opts.Reg.Register(o.JobsProcessed)
+		opts.Reg.MustRegister(o.JobsProcessed)
 		_ = opts.Reg.Register(o.JobsProcessedSeconds)
 		_ = opts.Reg.Register(o.JobsErrors)
-		_ = opts.Reg.Register(o.JobsPushed)
-		_ = opts.Reg.Register(o.JobsPushedErrors)
 		_ = opts.Reg.Register(o.JobsDeadlettered)
 		_ = opts.Reg.Register(o.JobsSkipped)
 	}
@@ -73,7 +60,7 @@ func NewObserver(opts ObserverOpts) *Observer {
 	return o
 }
 
-func (o *Observer) observeSuccess(ctx context.Context, t Task, start time.Time) {
+func (o *ConsumerObserver) observeSuccess(ctx context.Context, t Task, start time.Time) {
 	dur := time.Since(start)
 	if o.logger != nil {
 		o.logger.DebugContext(ctx, "job processed", "task", t, "duration", dur.String())
@@ -82,7 +69,7 @@ func (o *Observer) observeSuccess(ctx context.Context, t Task, start time.Time) 
 	o.JobsProcessedSeconds.WithLabelValues(string(t)).Observe(dur.Seconds())
 }
 
-func (o *Observer) observeError(ctx context.Context, t Task, start time.Time, err error) {
+func (o *ConsumerObserver) observeError(ctx context.Context, t Task, start time.Time, err error) {
 	dur := time.Since(start)
 	if o.logger != nil {
 		o.logger.ErrorContext(ctx, "job failed", "task", t, "duration", dur.String(), "error", err)
@@ -95,35 +82,5 @@ func (o *Observer) observeError(ctx context.Context, t Task, start time.Time, er
 	}
 	if errors.Is(err, ErrSkipRetry) {
 		o.JobsSkipped.WithLabelValues(string(t)).Inc()
-	}
-}
-
-func (o *Observer) observerJobPushed(ctx context.Context, is Task, opts []Option) {
-	if o.logger != nil {
-		o.logger.DebugContext(
-			ctx,
-			"job pushed",
-			"queue",
-			QueueFromOptions(opts),
-			"task",
-			is,
-			"options",
-			opts,
-		)
-	}
-}
-
-func (o *Observer) observerJobPushedError(ctx context.Context, is Task, opts []Option, err error) {
-	if o.logger != nil {
-		o.logger.ErrorContext(
-			ctx,
-			"job push failed",
-			"queue",
-			QueueFromOptions(opts),
-			"task",
-			is,
-			"error",
-			err,
-		)
 	}
 }

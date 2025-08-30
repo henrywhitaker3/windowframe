@@ -93,7 +93,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			reg := prometheus.NewRegistry()
-			obs := queue.NewObserver(queue.ObserverOpts{
+			obs := queue.NewConsumerObserver(queue.ConsumerObserverOpts{
 				Logger: test.NewLogger(t),
 				Reg:    reg,
 			})
@@ -103,7 +103,10 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 			})
 			p := queue.NewProducer(queue.ProducerOpts{
 				Producer: tc.producer(t),
-				Observer: obs,
+				Observer: queue.NewProducerObserver(queue.ProducerObserverOpts{
+					Logger: test.NewLogger(t),
+					Reg:    reg,
+				}),
 			})
 
 			handler := &fakeHandler{mu: &sync.Mutex{}, t: t}
@@ -185,17 +188,17 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 	}
 }
 
-func assertProcessed(t *testing.T, obs *queue.Observer, value float64) {
+func assertProcessed(t *testing.T, obs *queue.ConsumerObserver, value float64) {
 	processed := test.GetCounterValue(t, obs.JobsProcessed.WithLabelValues(string(DemoTask)))
 	require.Equal(t, value, processed)
 }
 
-func assertDeadlettered(t *testing.T, obs *queue.Observer, value float64) {
+func assertDeadlettered(t *testing.T, obs *queue.ConsumerObserver, value float64) {
 	processed := test.GetCounterValue(t, obs.JobsDeadlettered.WithLabelValues(string(DemoTask)))
 	require.Equal(t, value, processed)
 }
 
-func assertSkipped(t *testing.T, obs *queue.Observer, value float64) {
+func assertSkipped(t *testing.T, obs *queue.ConsumerObserver, value float64) {
 	processed := test.GetCounterValue(t, obs.JobsSkipped.WithLabelValues(string(DemoTask)))
 	require.Equal(t, value, processed)
 }
