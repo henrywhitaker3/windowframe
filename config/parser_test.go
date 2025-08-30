@@ -23,19 +23,20 @@ type DummyConfig struct {
 }
 
 func TestItParsesMultipleExtractors(t *testing.T) {
-	p := NewParser[DummyConfig]()
-
-	p.WithExtractors(NewYamlExtractor[DummyConfig]([]byte("some_field: bongo")))
-
-	conf, err := p.Parse()
+	conf, err := NewParser[DummyConfig]().
+		WithExtractors(NewYamlExtractor[DummyConfig]([]byte("some_field: bongo"))).
+		Parse()
 	require.Nil(t, err)
 	require.Equal(t, "bongo", conf.SomeField)
 
 	t.Setenv("SOME_FIELD", "apple")
 
-	p.WithExtractors(NewEnvExtractor[DummyConfig]())
-
-	conf, err = p.Parse()
+	conf, err = NewParser[DummyConfig]().
+		WithExtractors(
+			NewYamlExtractor[DummyConfig]([]byte("some_field: bongo")),
+			NewEnvExtractor[DummyConfig](),
+		).
+		Parse()
 	require.Nil(t, err)
 	require.Equal(t, "apple", conf.SomeField)
 }

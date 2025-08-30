@@ -13,8 +13,8 @@ type Parser[T any] struct {
 	extractors []Extractor[T]
 }
 
-func NewParser[T any]() Parser[T] {
-	return Parser[T]{
+func NewParser[T any]() *Parser[T] {
+	return &Parser[T]{
 		extractors: []Extractor[T]{},
 	}
 }
