@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/henrywhitaker3/windowframe/queue"
@@ -18,11 +17,15 @@ type ConsumerOpts struct {
 	StreamName    string
 	ConnectOpts   []nats.Option
 	JetStreamOpts []jetstream.JetStreamOpt
+
+	MaxWaiting    int
+	MaxAckPending int
 }
 
 type Consumer struct {
-	js     jetstream.JetStream
-	stream string
+	js jetstream.JetStream
+
+	opts ConsumerOpts
 }
 
 func NewConsumer(opts ConsumerOpts) (*Consumer, error) {
@@ -37,19 +40,21 @@ func NewConsumer(opts ConsumerOpts) (*Consumer, error) {
 	}
 
 	return &Consumer{
-		js:     js,
-		stream: opts.StreamName,
+		js:   js,
+		opts: opts,
 	}, nil
 }
 
 func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
-	stream, err := c.js.Stream(ctx, c.stream)
+	stream, err := c.js.Stream(ctx, c.opts.StreamName)
 	if err != nil {
 		return fmt.Errorf("get stream: %w", err)
 	}
 
 	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Name: strings.ReplaceAll(strings.ReplaceAll(c.stream, ".", "-"), ">", "-"),
+		Name:          c.opts.StreamName,
+		MaxWaiting:    c.opts.MaxWaiting,
+		MaxAckPending: c.opts.MaxAckPending,
 	})
 	if err != nil {
 		return fmt.Errorf("create or update consumer: %w", err)
