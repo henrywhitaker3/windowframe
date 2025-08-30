@@ -3,7 +3,7 @@ module github.com/henrywhitaker3/windowframe
 go 1.24.4
 
 require (
-	github.com/XSAM/otelsql v0.32.0
+	github.com/XSAM/otelsql v0.39.0
 	github.com/brianvoe/gofakeit/v7 v7.0.4
 	github.com/exaring/otelpgx v0.9.3
 	github.com/go-co-op/gocron/v2 v2.16.4
