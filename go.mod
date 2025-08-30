@@ -13,7 +13,7 @@ require (
 	github.com/henrywhitaker3/go-template v1.0.3
 	github.com/henrywhitaker3/rueidisleader v1.0.6
 	github.com/hibiken/asynq v0.25.1
-	github.com/jackc/pgx/v5 v5.7.4
+	github.com/jackc/pgx/v5 v5.7.5
 	github.com/nats-io/nats.go v1.45.0
 	github.com/prometheus/client_golang v1.23.0
 	github.com/redis/go-redis/extra/redisotel/v9 v9.12.1
