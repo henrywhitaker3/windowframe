@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -9,12 +10,14 @@ import (
 )
 
 type Observer struct {
-	jobsProcessed        *prometheus.CounterVec
-	jobsErrors           *prometheus.CounterVec
-	jobsProcessedSeconds prometheus.HistogramVec
+	JobsProcessed        *prometheus.CounterVec
+	JobsErrors           *prometheus.CounterVec
+	JobsProcessedSeconds *prometheus.HistogramVec
+	JobsDeadlettered     *prometheus.CounterVec
+	JobsSkipped          *prometheus.CounterVec
 
-	jobsPushed       *prometheus.CounterVec
-	jobsPushedErrors *prometheus.CounterVec
+	JobsPushed       *prometheus.CounterVec
+	JobsPushedErrors *prometheus.CounterVec
 
 	logger *slog.Logger
 }
@@ -26,23 +29,31 @@ type ObserverOpts struct {
 
 func NewObserver(opts ObserverOpts) *Observer {
 	o := &Observer{
-		jobsProcessed: prometheus.NewCounterVec(prometheus.CounterOpts{
+		JobsProcessed: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "queue_consumer_jobs_processed_total",
 			Help: "The number of jobs processed by the consumer",
 		}, []string{"task"}),
-		jobsProcessedSeconds: *prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		JobsProcessedSeconds: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name: "queue_consumer_job_processing_time_seconds",
 			Help: "The number of seconds taken for the job to be processed",
 		}, []string{"task"}),
-		jobsErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
+		JobsErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "queue_consumer_job_errors_total",
 			Help: "The number of errors when processing jobs",
 		}, []string{"task"}),
-		jobsPushed: prometheus.NewCounterVec(prometheus.CounterOpts{
+		JobsDeadlettered: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "queue_consumer_jobs_deadlettered_total",
+			Help: "The number of jobs that failed and were put on the deadletter queue",
+		}, []string{"task"}),
+		JobsSkipped: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "queue_consumer_jobs_skipped_total",
+			Help: "The number of jobs that failed and were skipped/removed from the queue",
+		}, []string{"task"}),
+		JobsPushed: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "queue_producer_jobs_pushed_total",
 			Help: "The number of jobs pushed to the queue",
 		}, []string{"queue", "task"}),
-		jobsPushedErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
+		JobsPushedErrors: prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "queue_producer_job_push_errors_total",
 			Help: "The number of errors pushing a job to the queue",
 		}, []string{"queue", "task"}),
@@ -50,11 +61,13 @@ func NewObserver(opts ObserverOpts) *Observer {
 	}
 
 	if opts.Reg != nil {
-		_ = opts.Reg.Register(o.jobsProcessed)
-		_ = opts.Reg.Register(o.jobsProcessedSeconds)
-		_ = opts.Reg.Register(o.jobsErrors)
-		_ = opts.Reg.Register(o.jobsPushed)
-		_ = opts.Reg.Register(o.jobsPushedErrors)
+		_ = opts.Reg.Register(o.JobsProcessed)
+		_ = opts.Reg.Register(o.JobsProcessedSeconds)
+		_ = opts.Reg.Register(o.JobsErrors)
+		_ = opts.Reg.Register(o.JobsPushed)
+		_ = opts.Reg.Register(o.JobsPushedErrors)
+		_ = opts.Reg.Register(o.JobsDeadlettered)
+		_ = opts.Reg.Register(o.JobsSkipped)
 	}
 
 	return o
@@ -65,8 +78,8 @@ func (o *Observer) observeSuccess(ctx context.Context, t Task, start time.Time) 
 	if o.logger != nil {
 		o.logger.DebugContext(ctx, "job processed", "task", t, "duration", dur.String())
 	}
-	o.jobsProcessed.WithLabelValues(string(t)).Inc()
-	o.jobsProcessedSeconds.WithLabelValues(string(t)).Observe(dur.Seconds())
+	o.JobsProcessed.WithLabelValues(string(t)).Inc()
+	o.JobsProcessedSeconds.WithLabelValues(string(t)).Observe(dur.Seconds())
 }
 
 func (o *Observer) observeError(ctx context.Context, t Task, start time.Time, err error) {
@@ -74,9 +87,15 @@ func (o *Observer) observeError(ctx context.Context, t Task, start time.Time, er
 	if o.logger != nil {
 		o.logger.ErrorContext(ctx, "job failed", "task", t, "duration", dur.String(), "error", err)
 	}
-	o.jobsProcessed.WithLabelValues(string(t)).Inc()
-	o.jobsErrors.WithLabelValues(string(t)).Inc()
-	o.jobsProcessedSeconds.WithLabelValues(string(t)).Observe(dur.Seconds())
+	o.JobsProcessed.WithLabelValues(string(t)).Inc()
+	o.JobsErrors.WithLabelValues(string(t)).Inc()
+	o.JobsProcessedSeconds.WithLabelValues(string(t)).Observe(dur.Seconds())
+	if errors.Is(err, ErrDeadLetter) {
+		o.JobsDeadlettered.WithLabelValues(string(t)).Inc()
+	}
+	if errors.Is(err, ErrSkipRetry) {
+		o.JobsSkipped.WithLabelValues(string(t)).Inc()
+	}
 }
 
 func (o *Observer) observerJobPushed(ctx context.Context, is Task, opts []Option) {
