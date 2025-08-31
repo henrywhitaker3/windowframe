@@ -27,6 +27,12 @@ type ConsumerOpts struct {
 	Backoff []time.Duration
 	// Defaults to 25
 	MaxDelivery int
+
+	// The number of messages to fetch at a time (default: 100)
+	BatchSize int
+
+	// How long to wait when fetching messages (default: 1s)
+	FetchMaxWait time.Duration
 }
 
 func (c ConsumerOpts) withDefaults() ConsumerOpts {
@@ -42,6 +48,12 @@ func (c ConsumerOpts) withDefaults() ConsumerOpts {
 	}
 	if c.MaxDelivery == 0 {
 		c.MaxDelivery = 25
+	}
+	if c.BatchSize == 0 {
+		c.BatchSize = 100
+	}
+	if c.FetchMaxWait == 0 {
+		c.FetchMaxWait = time.Second
 	}
 	return c
 }
@@ -79,7 +91,6 @@ func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
 
 	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
 		Name:       c.opts.StreamName,
-		Durable:    c.opts.StreamName,
 		MaxDeliver: c.opts.MaxDelivery,
 		BackOff:    c.opts.Backoff,
 	})
@@ -98,7 +109,7 @@ func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
 		case <-ctx.Done():
 			return nil
 		default:
-			batch, err := cons.Fetch(c.opts.Concurrency, jetstream.FetchMaxWait(time.Second))
+			batch, err := cons.Fetch(c.opts.BatchSize, jetstream.FetchMaxWait(c.opts.FetchMaxWait))
 			if err != nil {
 				time.Sleep(time.Millisecond * 50)
 				continue
