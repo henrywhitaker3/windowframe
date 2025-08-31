@@ -20,7 +20,30 @@ type ConsumerOpts struct {
 	ConnectOpts   []nats.Option
 	JetStreamOpts []jetstream.JetStreamOpt
 
+	// How many messages are handled concurrently. Defaults to NumCPU.
 	Concurrency int
+
+	// Defaults to [500ms, 1s, 3s]
+	Backoff []time.Duration
+	// Defaults to 25
+	MaxDelivery int
+}
+
+func (c ConsumerOpts) withDefaults() ConsumerOpts {
+	if c.Concurrency == 0 {
+		c.Concurrency = runtime.NumCPU()
+	}
+	if len(c.Backoff) == 0 {
+		c.Backoff = []time.Duration{
+			time.Millisecond * 500,
+			time.Second,
+			time.Second * 3,
+		}
+	}
+	if c.MaxDelivery == 0 {
+		c.MaxDelivery = 25
+	}
+	return c
 }
 
 type Consumer struct {
@@ -40,9 +63,7 @@ func NewConsumer(opts ConsumerOpts) (*Consumer, error) {
 		return nil, fmt.Errorf("create js instance: %w", err)
 	}
 
-	if opts.Concurrency == 0 {
-		opts.Concurrency = runtime.NumCPU()
-	}
+	opts = opts.withDefaults()
 
 	return &Consumer{
 		js:   js,
@@ -57,7 +78,10 @@ func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
 	}
 
 	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
-		Name: c.opts.StreamName,
+		Name:       c.opts.StreamName,
+		Durable:    c.opts.StreamName,
+		MaxDeliver: c.opts.MaxDelivery,
+		BackOff:    c.opts.Backoff,
 	})
 	if err != nil {
 		return fmt.Errorf("create or update consumer: %w", err)
