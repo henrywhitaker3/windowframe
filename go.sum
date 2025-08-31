@@ -192,8 +192,8 @@ github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs
 github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
 github.com/henrywhitaker3/ctxgen v1.0.1 h1:T1tsyUKS4ymBkqP9KBrVDh5fskzkdm2zTfLH0pw8dJ0=
 github.com/henrywhitaker3/ctxgen v1.0.1/go.mod h1:Q9fBma6LqFfEqJbltrc1Icdp9YUA5M3UVcz7tqGfPLc=
-github.com/henrywhitaker3/rueidisleader v1.0.6 h1:+FPXSY68rk8g8lJpuodKK5QQYd/uNAjNsclalzj2tds=
-github.com/henrywhitaker3/rueidisleader v1.0.6/go.mod h1:C/1B1tHK2IM/j4XEaTWbEe4XrHyUUNu78vbs1Xuff/M=
+github.com/henrywhitaker3/rueidisleader v1.0.7 h1:rTqvzcd+M4TnWYC2/aGk1cmoVHAwy5VUviPQ91qP4tY=
+github.com/henrywhitaker3/rueidisleader v1.0.7/go.mod h1:NrizpwwEdbM/Ogvl3DOhVgZygSzN+17x/fgxBpgBQ0U=
 github.com/hibiken/asynq v0.25.1 h1:phj028N0nm15n8O2ims+IvJ2gz4k2auvermngh9JhTw=
 github.com/hibiken/asynq v0.25.1/go.mod h1:pazWNOLBu0FEynQRBvHA26qdIKRSmfdIfUm4HdsLmXg=
 github.com/huaweicloud/huaweicloud-sdk-go-obs v3.25.4+incompatible h1:yNjwdvn9fwuN6Ouxr0xHM0cVu03YMUWUyFmu2van/Yc=
