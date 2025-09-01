@@ -3,13 +3,10 @@ package nats
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
-	"runtime"
-	"sync"
 	"time"
 
-	"github.com/henrywhitaker3/flow"
 	"github.com/henrywhitaker3/windowframe/queue"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -20,9 +17,6 @@ type ConsumerOpts struct {
 	StreamName    string
 	ConnectOpts   []nats.Option
 	JetStreamOpts []jetstream.JetStreamOpt
-
-	// How many messages are handled concurrently. Defaults to NumCPU.
-	Concurrency int
 
 	// Defaults to [500ms, 1s, 3s]
 	Backoff []time.Duration
@@ -35,9 +29,6 @@ type ConsumerOpts struct {
 	// How long to wait when fetching messages (default: 1s)
 	FetchMaxWait time.Duration
 
-	// How many times to attempt message ack (default: 3)
-	AckAttempts int
-
 	// How long to keep message processed data in KV store (default: 1h)
 	ProcessedLogTTL time.Duration
 
@@ -46,9 +37,6 @@ type ConsumerOpts struct {
 }
 
 func (c ConsumerOpts) withDefaults() ConsumerOpts {
-	if c.Concurrency == 0 {
-		c.Concurrency = runtime.NumCPU()
-	}
 	if len(c.Backoff) == 0 {
 		c.Backoff = []time.Duration{
 			time.Millisecond * 500,
@@ -64,9 +52,6 @@ func (c ConsumerOpts) withDefaults() ConsumerOpts {
 	}
 	if c.FetchMaxWait == 0 {
 		c.FetchMaxWait = time.Second
-	}
-	if c.AckAttempts == 0 {
-		c.AckAttempts = 3
 	}
 	if c.ProcessedLogTTL == 0 {
 		c.ProcessedLogTTL = time.Hour
@@ -103,7 +88,7 @@ func NewConsumer(opts ConsumerOpts) (*Consumer, error) {
 	}, nil
 }
 
-func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
+func (c *Consumer) Consume(ctx context.Context) (<-chan queue.Message, error) {
 	kv, err := c.js.CreateOrUpdateKeyValue(ctx, jetstream.KeyValueConfig{
 		Bucket:      c.opts.StreamName,
 		Description: "The processed store log for the messages",
@@ -111,13 +96,13 @@ func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
 		Replicas:    c.opts.ProcessedLogReplicas,
 	})
 	if err != nil {
-		return fmt.Errorf("create processed log store: %w", err)
+		return nil, fmt.Errorf("create processed log store: %w", err)
 	}
 	c.kv = kv
 
 	stream, err := c.js.Stream(ctx, c.opts.StreamName)
 	if err != nil {
-		return fmt.Errorf("get stream: %w", err)
+		return nil, fmt.Errorf("get stream: %w", err)
 	}
 
 	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
@@ -126,37 +111,36 @@ func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
 		BackOff:    c.opts.Backoff,
 	})
 	if err != nil {
-		return fmt.Errorf("create or update consumer: %w", err)
+		return nil, fmt.Errorf("create or update consumer: %w", err)
 	}
 
-	pool := make(chan struct{}, c.opts.Concurrency)
-	defer close(pool)
+	out := make(chan queue.Message, 1000)
 
-	wg := &sync.WaitGroup{}
-	defer wg.Wait()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			batch, err := cons.Fetch(c.opts.BatchSize, jetstream.FetchMaxWait(c.opts.FetchMaxWait))
-			if err != nil {
-				time.Sleep(time.Millisecond * 50)
-				continue
-			}
-			for msg := range batch.Messages() {
-				wg.Go(func() {
-					pool <- struct{}{}
-					c.handleMessage(ctx, msg, h)
-					<-pool
-				})
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				batch, err := cons.Fetch(
+					c.opts.BatchSize,
+					jetstream.FetchMaxWait(c.opts.FetchMaxWait),
+				)
+				if err != nil {
+					time.Sleep(time.Millisecond * 50)
+					continue
+				}
+				for msg := range batch.Messages() {
+					c.handleMessage(ctx, msg, out)
+				}
 			}
 		}
-	}
+	}()
+
+	return out, nil
 }
 
-func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, h queue.HandlerFunc) {
+func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out chan queue.Message) {
 	if c.kv == nil {
 		panic("kv processed log is nil")
 	}
@@ -181,31 +165,12 @@ func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, h queue
 			return
 		}
 	}
-	if err := h(ctx, msg.Data()); err != nil {
-		if errors.Is(err, queue.ErrSkipRetry) {
-			_ = msg.Term()
-			return
-		}
-		if errors.Is(err, queue.ErrDeadLetter) {
-			// TODO: add deadletter functionality
-			_ = msg.TermWithReason("deadletter")
-			return
-			// panic("deadletter not impleneted in nats consumers")
-		}
+	var job queue.Job
+	if err := json.Unmarshal(msg.Data(), &job); err != nil {
 		_ = msg.Nak()
+		return
 	}
-
-	ack := flow.Retry(func(ctx context.Context) (struct{}, error) {
-		return struct{}{}, msg.DoubleAck(ctx)
-	}, c.opts.AckAttempts)
-
-	if _, err := ack(ctx); err == nil {
-		store := flow.Retry(func(ctx context.Context) (struct{}, error) {
-			_, err := c.kv.Create(ctx, id, []byte("processed"))
-			return struct{}{}, err
-		}, c.opts.AckAttempts)
-		_, _ = store(ctx)
-	}
+	out <- newMessage(job, msg, c.kv)
 }
 
 func (c *Consumer) Close(ctx context.Context) error {

@@ -2,7 +2,6 @@ package asynq
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"runtime"
@@ -80,17 +79,21 @@ func (w *Consumer) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
-	return w.server.Run(asynq.HandlerFunc(func(ctx context.Context, t *asynq.Task) error {
-		if err := h(ctx, t.Payload()); err != nil {
-			if errors.Is(err, queue.ErrSkipRetry) {
-				return fmt.Errorf("%w %w", err, asynq.RevokeTask)
+func (w *Consumer) Consume(ctx context.Context) (<-chan queue.Message, error) {
+	out := make(chan queue.Message, 1000)
+	startErr := make(chan error)
+	go func() {
+		err := w.server.Start(asynq.HandlerFunc(func(ctx context.Context, t *asynq.Task) error {
+			var job queue.Job
+			if err := queue.Unmarshal(t.Payload(), &job); err != nil {
+				return fmt.Errorf("unmarshal job: %w", err)
 			}
-			if errors.Is(err, queue.ErrDeadLetter) {
-				return fmt.Errorf("%w %w", err, asynq.SkipRetry)
-			}
-			return err
-		}
-		return nil
-	}))
+			err := make(chan error, 1)
+			msg := newMessage(job, err)
+			out <- msg
+			return <-err
+		}))
+		startErr <- err
+	}()
+	return out, <-startErr
 }

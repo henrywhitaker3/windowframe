@@ -4,7 +4,6 @@ package queue
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 )
 
@@ -15,22 +14,22 @@ type ShutdownFunc = func(context.Context) error
 
 type HandlerFunc = func(context.Context, []byte) error
 
-type job struct {
+type Job struct {
+	ID        string    `json:"id"`
 	Task      Task      `json:"task"`
 	CreatedAt time.Time `json:"created_at"`
 	Payload   []byte    `json:"payload"`
+	Options   []Option  `json:"-"`
 }
 
-func newJob(task Task, payload any) (job, error) {
-	by, err := Marshal(payload)
-	if err != nil {
-		return job{}, fmt.Errorf("marshal job payload: %w", err)
-	}
-	return job{
+func NewJob(id string, task Task, payload []byte, options ...Option) Job {
+	return Job{
+		ID:        id,
 		Task:      task,
 		CreatedAt: time.Now().UTC(),
-		Payload:   by,
-	}, nil
+		Payload:   payload,
+		Options:   options,
+	}
 }
 
 func Marshal(d any) ([]byte, error) {

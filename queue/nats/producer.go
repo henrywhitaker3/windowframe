@@ -43,15 +43,19 @@ const (
 
 func (p *Producer) Push(
 	ctx context.Context,
-	task queue.Task,
-	payload []byte,
-	opts ...queue.Option,
+	job queue.Job,
 ) error {
-	msg := nats.NewMsg(fmt.Sprintf("%s.%s", string(queue.QueueFromOptions(opts)), string(task)))
-	msg.Data = payload
+	msg := nats.NewMsg(
+		fmt.Sprintf("%s.%s", string(queue.QueueFromOptions(job.Options)), string(job.Task)),
+	)
+	by, err := queue.Marshal(job)
+	if err != nil {
+		return fmt.Errorf("mnarshal job: %w", err)
+	}
+	msg.Data = by
 
 	var runAt time.Time
-	for _, opt := range opts {
+	for _, opt := range job.Options {
 		switch opt.Type() {
 		case queue.AfterOpt:
 			runAt = time.Now().Add(opt.Value().(time.Duration))
@@ -63,7 +67,7 @@ func (p *Producer) Push(
 		msg.Header.Add(DelayedHeader, runAt.UTC().Format(time.RFC3339))
 	}
 
-	_, err := p.js.PublishMsg(ctx, msg, jsOptsFromQueueOpts(opts)...)
+	_, err = p.js.PublishMsg(ctx, msg, jsOptsFromQueueOpts(job.Options)...)
 	return err
 }
 

@@ -3,6 +3,7 @@ package asynq
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/henrywhitaker3/windowframe/queue"
@@ -28,15 +29,17 @@ func NewProducer(opts ProducerOpts) (*Producer, error) {
 
 func (p *Producer) Push(
 	ctx context.Context,
-	kind queue.Task,
-	payload []byte,
-	opts ...queue.Option,
+	job queue.Job,
 ) error {
-	task := asynq.NewTask(string(kind), payload, asynqOptsFromQueueOpts(opts)...)
-	_, err := p.client.EnqueueContext(
+	by, err := queue.Marshal(job)
+	if err != nil {
+		return fmt.Errorf("marshal job: %w", err)
+	}
+	task := asynq.NewTask(string(job.Task), by, asynqOptsFromQueueOpts(job.Options)...)
+	_, err = p.client.EnqueueContext(
 		ctx,
 		task,
-		asynq.Queue(string(queue.QueueFromOptions(opts))),
+		asynq.Queue(string(queue.QueueFromOptions(job.Options))),
 	)
 	return err
 }
