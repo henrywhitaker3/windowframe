@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/henrywhitaker3/flow"
 	"github.com/henrywhitaker3/windowframe/queue"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -33,6 +34,15 @@ type ConsumerOpts struct {
 
 	// How long to wait when fetching messages (default: 1s)
 	FetchMaxWait time.Duration
+
+	// How many times to attempt message ack (default: 3)
+	AckAttempts int
+
+	// How long to keep message processed data in KV store (default: 1h)
+	ProcessedLogTTL time.Duration
+
+	// How many replicas of the processed log to store (default: 3)
+	ProcessedLogReplicas int
 }
 
 func (c ConsumerOpts) withDefaults() ConsumerOpts {
@@ -55,11 +65,21 @@ func (c ConsumerOpts) withDefaults() ConsumerOpts {
 	if c.FetchMaxWait == 0 {
 		c.FetchMaxWait = time.Second
 	}
+	if c.AckAttempts == 0 {
+		c.AckAttempts = 3
+	}
+	if c.ProcessedLogTTL == 0 {
+		c.ProcessedLogTTL = time.Hour
+	}
+	if c.ProcessedLogReplicas == 0 {
+		c.ProcessedLogReplicas = 3
+	}
 	return c
 }
 
 type Consumer struct {
 	js jetstream.JetStream
+	kv jetstream.KeyValue
 
 	opts ConsumerOpts
 }
@@ -84,6 +104,17 @@ func NewConsumer(opts ConsumerOpts) (*Consumer, error) {
 }
 
 func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
+	kv, err := c.js.CreateOrUpdateKeyValue(ctx, jetstream.KeyValueConfig{
+		Bucket:      c.opts.StreamName,
+		Description: "The processed store log for the messages",
+		TTL:         c.opts.ProcessedLogTTL,
+		Replicas:    c.opts.ProcessedLogReplicas,
+	})
+	if err != nil {
+		return fmt.Errorf("create processed log store: %w", err)
+	}
+	c.kv = kv
+
 	stream, err := c.js.Stream(ctx, c.opts.StreamName)
 	if err != nil {
 		return fmt.Errorf("get stream: %w", err)
@@ -126,6 +157,22 @@ func (c *Consumer) Consume(ctx context.Context, h queue.HandlerFunc) error {
 }
 
 func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, h queue.HandlerFunc) {
+	if c.kv == nil {
+		panic("kv processed log is nil")
+	}
+
+	id := msg.Headers().Get("Nats-Msg-Id")
+	if id == "" {
+		_ = msg.TermWithReason("message has no id")
+		return
+	}
+
+	// If the key exists, then the message has already been processed
+	if _, err := c.kv.Get(ctx, id); err == nil {
+		_ = msg.TermWithReason("message already processed")
+		return
+	}
+
 	if untilRaw := msg.Headers().Get(DelayedHeader); untilRaw != "" {
 		t, _ := time.Parse(time.RFC3339, untilRaw)
 		until := time.Until(t)
@@ -147,7 +194,18 @@ func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, h queue
 		}
 		_ = msg.Nak()
 	}
-	_ = msg.Ack()
+
+	ack := flow.Retry(func(ctx context.Context) (struct{}, error) {
+		return struct{}{}, msg.DoubleAck(ctx)
+	}, c.opts.AckAttempts)
+
+	if _, err := ack(ctx); err == nil {
+		store := flow.Retry(func(ctx context.Context) (struct{}, error) {
+			_, err := c.kv.Create(ctx, id, []byte("processed"))
+			return struct{}{}, err
+		}, c.opts.AckAttempts)
+		_, _ = store(ctx)
+	}
 }
 
 func (c *Consumer) Close(ctx context.Context) error {
