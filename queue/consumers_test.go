@@ -71,8 +71,9 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 			name: "nats",
 			consumer: func(t *testing.T) queue.QueueConsumer {
 				cons, err := nats.NewConsumer(nats.ConsumerOpts{
-					URL:        natsURL,
-					StreamName: "demo",
+					URL:                  natsURL,
+					StreamName:           "demo",
+					ProcessedLogReplicas: 1,
 				})
 				require.Nil(t, err)
 				return cons

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/henrywhitaker3/windowframe/queue"
+	"github.com/henrywhitaker3/windowframe/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -73,10 +74,12 @@ func (p *Producer) Close(ctx context.Context) error {
 
 func jsOptsFromQueueOpts(opts []queue.Option) []jetstream.PublishOpt {
 	out := []jetstream.PublishOpt{}
+	hasId := false
 	for _, opt := range opts {
 		switch opt.Type() {
 		case queue.IDOpt:
 			out = append(out, jetstream.WithMsgID(opt.Value().(string)))
+			hasId = true
 		case queue.AfterOpt:
 			// Handled in the Push method with headers
 		case queue.AtOpt:
@@ -84,6 +87,9 @@ func jsOptsFromQueueOpts(opts []queue.Option) []jetstream.PublishOpt {
 		case queue.MaxTriesOpt:
 			// Not handled as it is set in the stream config
 		}
+	}
+	if !hasId {
+		out = append(out, jetstream.WithMsgID(uuid.MustNew().String()))
 	}
 	return out
 }
