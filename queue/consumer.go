@@ -84,7 +84,8 @@ func NewConsumer(opts ConsumerOpts) *Consumer {
 	}
 }
 
-// Consume from the queue. Blocks until the context is cancelled.
+// Consume from the queue.
+// Blocks until the context is cancelled. When this happens, the Close(ctx) method is called.
 func (c *Consumer) Consume(ctx context.Context) error {
 	messages, err := c.c.Consume(ctx)
 	if err != nil {
@@ -105,6 +106,16 @@ func (c *Consumer) Consume(ctx context.Context) error {
 	}
 
 	<-ctx.Done()
+	if err := c.c.Close(context.Background()); err != nil {
+		return fmt.Errorf("close consumer driver: %w", err)
+	}
+
+	if len(messages) > 0 {
+		size := len(messages)
+		for range size {
+			_ = c.handler(context.Background(), <-messages)
+		}
+	}
 
 	return nil
 }
