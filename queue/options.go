@@ -26,20 +26,21 @@ type (
 	afterOption time.Duration
 	iDOption    string
 	maxTriesOpt int
+	onQueue     Queue
 )
 
-func (o Queue) Type() OptionType {
+func (o onQueue) Type() OptionType {
 	return OnQueueOpt
 }
-func (o Queue) String() string {
+func (o onQueue) String() string {
 	return fmt.Sprintf("OnQueue(%s)", string(o))
 }
-func (o Queue) Value() any {
+func (o onQueue) Value() any {
 	return Queue(o)
 }
 
 func OnQueue(q Queue) Option {
-	return q
+	return onQueue(q)
 }
 
 func (a atOption) Type() OptionType {
@@ -80,7 +81,7 @@ func (i iDOption) Value() any {
 	return string(i)
 }
 
-func WithID(id string) Option {
+func withID(id string) Option {
 	return iDOption(id)
 }
 

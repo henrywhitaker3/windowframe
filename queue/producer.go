@@ -2,7 +2,6 @@ package queue
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/henrywhitaker3/windowframe/tracing"
 	"go.opentelemetry.io/otel/attribute"
@@ -10,7 +9,7 @@ import (
 )
 
 type QueueProducer interface {
-	Push(context.Context, Task, []byte, ...Option) error
+	Push(context.Context, Job) error
 	Close(context.Context) error
 }
 
@@ -38,32 +37,22 @@ func NewProducer(opts ProducerOpts) *Producer {
 
 func (p *Producer) Push(
 	ctx context.Context,
-	is Task,
-	payload any,
-	opts ...Option,
+	job Job,
 ) error {
 	ctx, span := tracing.NewSpan(
 		ctx,
 		"PushTask",
 		trace.WithSpanKind(trace.SpanKindConsumer),
-		trace.WithAttributes(attribute.String("task", string(is))),
+		trace.WithAttributes(attribute.String("task", string(job.Task))),
 	)
 	defer span.End()
+	job.Options = append(job.Options, withID(job.ID))
 
-	job, err := newJob(is, payload)
-	if err != nil {
-		return fmt.Errorf("create job payload: %w", err)
-	}
-	by, err := Marshal(job)
-	if err != nil {
-		return fmt.Errorf("marshal job payload: %w", err)
-	}
-
-	if err := p.p.Push(ctx, is, by, opts...); err != nil {
-		p.obs.observerJobPushedError(ctx, is, opts, err)
+	if err := p.p.Push(ctx, job); err != nil {
+		p.obs.observerJobPushedError(ctx, job.Task, job.Options, err)
 		return err
 	}
-	p.obs.observerJobPushed(ctx, is, opts)
+	p.obs.observerJobPushed(ctx, job.Task, job.Options)
 	return nil
 }
 

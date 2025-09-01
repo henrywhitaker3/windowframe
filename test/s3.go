@@ -50,7 +50,7 @@ type S3Details struct {
 	SecretAccessKey string
 }
 
-func S3(t *testing.T) (S3Details, context.CancelFunc) {
+func S3(t testing.TB) (S3Details, context.CancelFunc) {
 	configPath := filepath.Join(t.TempDir(), "garage.toml")
 	require.Nil(
 		t,
@@ -124,7 +124,7 @@ func S3(t *testing.T) (S3Details, context.CancelFunc) {
 }
 
 func runContainerCommand(
-	t *testing.T,
+	t testing.TB,
 	container testcontainers.Container,
 	command []string,
 ) []byte {

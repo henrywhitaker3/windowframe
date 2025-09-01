@@ -3,8 +3,10 @@ package queue_test
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/henrywhitaker3/windowframe/queue/asynq"
 	"github.com/henrywhitaker3/windowframe/queue/nats"
 	"github.com/henrywhitaker3/windowframe/test"
+	"github.com/henrywhitaker3/windowframe/uuid"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -28,6 +31,9 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 
 	natsURL, cancel := test.Nats(t)
 	defer cancel()
+
+	logger := test.NewLogger(t)
+	slog.SetDefault(logger)
 
 	test.NatsStream(t, natsURL, jetstream.StreamConfig{
 		Name:      "demo",
@@ -88,14 +94,14 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
-	defer cancel()
-
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
+			defer cancel()
+
 			reg := prometheus.NewRegistry()
 			obs := queue.NewConsumerObserver(queue.ConsumerObserverOpts{
-				Logger: test.NewLogger(t),
+				Logger: logger,
 				Reg:    reg,
 			})
 			c := queue.NewConsumer(queue.ConsumerOpts{
@@ -105,7 +111,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 			p := queue.NewProducer(queue.ProducerOpts{
 				Producer: tc.producer(t),
 				Observer: queue.NewProducerObserver(queue.ProducerObserverOpts{
-					Logger: test.NewLogger(t),
+					Logger: logger,
 					Reg:    reg,
 				}),
 			})
@@ -121,10 +127,12 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 				t,
 				p.Push(
 					ctx,
-					queue.Task("bongo"),
-					"bongo-no-handler",
-					queue.OnQueue(DemoQueue),
-					queue.WithID("no-handler"),
+					queue.NewJob(
+						"no-handler",
+						queue.Task("bongo"),
+						[]byte("bongo-no-handler"),
+						queue.OnQueue(DemoQueue),
+					),
 				),
 			)
 			// Should register a hit
@@ -132,20 +140,38 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 				t,
 				p.Push(
 					ctx,
-					DemoTask,
-					"bongo",
-					queue.OnQueue(DemoQueue),
-					queue.WithID("standard-job"),
+					queue.NewJob(
+						"standard-job",
+						DemoTask,
+						[]byte("bongo"),
+						queue.OnQueue(DemoQueue),
+					),
+				),
+			)
+			// Should be put in deadletter queue
+			require.Nil(
+				t,
+				p.Push(
+					ctx,
+					queue.NewJob(
+						"should-deadletter",
+						DemoTask,
+						[]byte("dead"),
+						queue.OnQueue(DemoQueue),
+					),
+				),
+			)
+			// Should error and be skipped
+			require.Nil(
+				t,
+				p.Push(
+					ctx,
+					queue.NewJob("should-skip", DemoTask, []byte("skip"), queue.OnQueue(DemoQueue)),
 				),
 			)
 
-			// Should be put in deadletter queue
-			require.Nil(t, p.Push(ctx, DemoTask, "dead", queue.OnQueue(DemoQueue)))
-			// Should error and be skipped
-			require.Nil(t, p.Push(ctx, DemoTask, "skip", queue.OnQueue(DemoQueue)))
-
 			go func() {
-				if err := c.Consume(ctx); err != nil {
+				if err := c.Consume(context.Background()); err != nil {
 					panic(err)
 				}
 			}()
@@ -163,11 +189,13 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 				t,
 				p.Push(
 					ctx,
-					DemoTask,
-					"bongo-after-duration",
-					queue.OnQueue(DemoQueue),
-					queue.After(time.Second*10),
-					queue.WithID("task-after-duration"),
+					queue.NewJob(
+						"task-after-duratrion",
+						DemoTask,
+						[]byte("bongo-after-duration"),
+						queue.OnQueue(DemoQueue),
+						queue.After(time.Second*10),
+					),
 				),
 			)
 			// Should register a hit after another second wait
@@ -175,11 +203,13 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 				t,
 				p.Push(
 					ctx,
-					DemoTask,
-					"bongo-at-time",
-					queue.OnQueue(DemoQueue),
-					queue.WithID("task-at-time"),
-					queue.At(time.Now().Add(time.Second*10)),
+					queue.NewJob(
+						"task-at-time",
+						DemoTask,
+						[]byte("bongo-at-time"),
+						queue.OnQueue(DemoQueue),
+						queue.At(time.Now().Add(time.Second*10)),
+					),
 				),
 			)
 			t.Log("waiting for queued/delayed jobs to be processed")
@@ -216,10 +246,7 @@ func (f *fakeHandler) Handler(ctx context.Context, payload []byte) error {
 
 	f.hits++
 
-	var str string
-	if err := queue.Unmarshal(payload, &str); err != nil {
-		return err
-	}
+	str := string(payload)
 
 	f.t.Log("got payload", str)
 
@@ -234,4 +261,80 @@ func (f *fakeHandler) Handler(ctx context.Context, payload []byte) error {
 	}
 
 	return fmt.Errorf("not bongo")
+}
+
+func BenchmarkQueueConsumer(b *testing.B) {
+	slog.SetDefault(test.NewLogger(b))
+
+	natsURL, cancel := test.Nats(b)
+	defer cancel()
+
+	test.NatsStream(b, natsURL, jetstream.StreamConfig{
+		Name:      "demo",
+		Subjects:  []string{"demo.>"},
+		Retention: jetstream.WorkQueuePolicy,
+		Discard:   jetstream.DiscardNew,
+		Replicas:  1,
+	})
+
+	natsProd, err := nats.NewProducer(nats.ProducerOpts{
+		URL: natsURL,
+	})
+	require.Nil(b, err)
+	prod := queue.NewProducer(queue.ProducerOpts{
+		Producer: natsProd,
+		Observer: queue.NewProducerObserver(queue.ProducerObserverOpts{
+			Logger: slog.Default(),
+		}),
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	count := 1000000
+	slog.Info("pushing messages to stream", "count", count)
+	for range count {
+		require.Nil(b, prod.Push(ctx, queue.NewJob(
+			uuid.MustNew().String(),
+			DemoTask,
+			[]byte("bongo"),
+			queue.OnQueue(DemoQueue),
+		)))
+	}
+	slog.Info("finished pusing messages")
+	require.Nil(b, prod.Close(ctx))
+
+	natsCons, err := nats.NewConsumer(nats.ConsumerOpts{
+		URL:                  natsURL,
+		StreamName:           "demo",
+		ProcessedLogReplicas: 1,
+	})
+	require.Nil(b, err)
+	cons := queue.NewConsumer(queue.ConsumerOpts{
+		Consumer: natsCons,
+		Observer: queue.NewConsumerObserver(queue.ConsumerObserverOpts{
+			Logger: slog.Default(),
+		}),
+	})
+
+	done := make(chan struct{})
+	hits := &atomic.Int64{}
+	cons.RegisterHandler(DemoTask, func(ctx context.Context, payload []byte) error {
+		if size := hits.Add(1); int(size) == count {
+			close(done)
+		}
+		return nil
+	})
+
+	b.ResetTimer()
+	go cons.Consume(ctx)
+
+	<-done
+	require.Equal(b, count, int(hits.Load()))
+	b.StopTimer()
+	slog.Info("finished benchmark")
+
+	// Now sleep for a bit to make sure it has not processed any message more than once
+	time.Sleep(time.Second * 5)
+	require.Equal(b, count, int(hits.Load()))
 }

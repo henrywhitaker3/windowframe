@@ -60,27 +60,47 @@ func NewConsumerObserver(opts ConsumerObserverOpts) *ConsumerObserver {
 	return o
 }
 
-func (o *ConsumerObserver) observeSuccess(ctx context.Context, t Task, start time.Time) {
+func (o *ConsumerObserver) observeSuccess(ctx context.Context, job Job, start time.Time) {
 	dur := time.Since(start)
 	if o.logger != nil {
-		o.logger.DebugContext(ctx, "job processed", "task", t, "duration", dur.String())
+		o.logger.DebugContext(
+			ctx,
+			"job processed",
+			"id",
+			job.ID,
+			"task",
+			job.Task,
+			"duration",
+			dur.String(),
+		)
 	}
-	o.JobsProcessed.WithLabelValues(string(t)).Inc()
-	o.JobsProcessedSeconds.WithLabelValues(string(t)).Observe(dur.Seconds())
+	o.JobsProcessed.WithLabelValues(string(job.Task)).Inc()
+	o.JobsProcessedSeconds.WithLabelValues(string(job.Task)).Observe(dur.Seconds())
 }
 
-func (o *ConsumerObserver) observeError(ctx context.Context, t Task, start time.Time, err error) {
+func (o *ConsumerObserver) observeError(ctx context.Context, job Job, start time.Time, err error) {
 	dur := time.Since(start)
 	if o.logger != nil {
-		o.logger.ErrorContext(ctx, "job failed", "task", t, "duration", dur.String(), "error", err)
+		o.logger.ErrorContext(
+			ctx,
+			"job failed",
+			"id",
+			job.ID,
+			"task",
+			job.Task,
+			"duration",
+			dur.String(),
+			"error",
+			err,
+		)
 	}
-	o.JobsProcessed.WithLabelValues(string(t)).Inc()
-	o.JobsErrors.WithLabelValues(string(t)).Inc()
-	o.JobsProcessedSeconds.WithLabelValues(string(t)).Observe(dur.Seconds())
+	o.JobsProcessed.WithLabelValues(string(job.Task)).Inc()
+	o.JobsErrors.WithLabelValues(string(job.Task)).Inc()
+	o.JobsProcessedSeconds.WithLabelValues(string(job.Task)).Observe(dur.Seconds())
 	if errors.Is(err, ErrDeadLetter) {
-		o.JobsDeadlettered.WithLabelValues(string(t)).Inc()
+		o.JobsDeadlettered.WithLabelValues(string(job.Task)).Inc()
 	}
 	if errors.Is(err, ErrSkipRetry) {
-		o.JobsSkipped.WithLabelValues(string(t)).Inc()
+		o.JobsSkipped.WithLabelValues(string(job.Task)).Inc()
 	}
 }
