@@ -6,7 +6,7 @@ import (
 )
 
 type testingWriter struct {
-	t *testing.T
+	t testing.TB
 }
 
 func (t testingWriter) Write(in []byte) (int, error) {
@@ -14,7 +14,7 @@ func (t testingWriter) Write(in []byte) (int, error) {
 	return len(in), nil
 }
 
-func NewLogger(t *testing.T) *slog.Logger {
+func NewLogger(t testing.TB) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(&testingWriter{t: t}, &slog.HandlerOptions{
 		Level: slog.LevelDebug,
 	}))

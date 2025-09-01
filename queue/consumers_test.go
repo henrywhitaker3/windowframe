@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/henrywhitaker3/windowframe/queue/asynq"
 	"github.com/henrywhitaker3/windowframe/queue/nats"
 	"github.com/henrywhitaker3/windowframe/test"
+	"github.com/henrywhitaker3/windowframe/uuid"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
@@ -259,4 +261,80 @@ func (f *fakeHandler) Handler(ctx context.Context, payload []byte) error {
 	}
 
 	return fmt.Errorf("not bongo")
+}
+
+func BenchmarkQueueConsumer(b *testing.B) {
+	slog.SetDefault(test.NewLogger(b))
+
+	natsURL, cancel := test.Nats(b)
+	defer cancel()
+
+	test.NatsStream(b, natsURL, jetstream.StreamConfig{
+		Name:      "demo",
+		Subjects:  []string{"demo.>"},
+		Retention: jetstream.WorkQueuePolicy,
+		Discard:   jetstream.DiscardNew,
+		Replicas:  1,
+	})
+
+	natsProd, err := nats.NewProducer(nats.ProducerOpts{
+		URL: natsURL,
+	})
+	require.Nil(b, err)
+	prod := queue.NewProducer(queue.ProducerOpts{
+		Producer: natsProd,
+		Observer: queue.NewProducerObserver(queue.ProducerObserverOpts{
+			Logger: slog.Default(),
+		}),
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	count := 1000000
+	slog.Info("pushing messages to stream", "count", count)
+	for range count {
+		require.Nil(b, prod.Push(ctx, queue.NewJob(
+			uuid.MustNew().String(),
+			DemoTask,
+			[]byte("bongo"),
+			queue.OnQueue(DemoQueue),
+		)))
+	}
+	slog.Info("finished pusing messages")
+	require.Nil(b, prod.Close(ctx))
+
+	natsCons, err := nats.NewConsumer(nats.ConsumerOpts{
+		URL:                  natsURL,
+		StreamName:           "demo",
+		ProcessedLogReplicas: 1,
+	})
+	require.Nil(b, err)
+	cons := queue.NewConsumer(queue.ConsumerOpts{
+		Consumer: natsCons,
+		Observer: queue.NewConsumerObserver(queue.ConsumerObserverOpts{
+			Logger: slog.Default(),
+		}),
+	})
+
+	done := make(chan struct{})
+	hits := &atomic.Int64{}
+	cons.RegisterHandler(DemoTask, func(ctx context.Context, payload []byte) error {
+		if size := hits.Add(1); int(size) == count {
+			close(done)
+		}
+		return nil
+	})
+
+	b.ResetTimer()
+	go cons.Consume(ctx)
+
+	<-done
+	require.Equal(b, count, int(hits.Load()))
+	b.StopTimer()
+	slog.Info("finished benchmark")
+
+	// Now sleep for a bit to make sure it has not processed any message more than once
+	time.Sleep(time.Second * 5)
+	require.Equal(b, count, int(hits.Load()))
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/nats"
 )
 
-func Nats(t *testing.T) (string, context.CancelFunc) {
+func Nats(t testing.TB) (string, context.CancelFunc) {
 	nats, err := nats.Run(
 		context.Background(),
 		"nats:2.11.8",
@@ -33,7 +33,7 @@ func Nats(t *testing.T) (string, context.CancelFunc) {
 	}
 }
 
-func NatsStream(t *testing.T, url string, conf jetstream.StreamConfig) {
+func NatsStream(t testing.TB, url string, conf jetstream.StreamConfig) {
 	conn, err := nnats.Connect(url)
 	require.Nil(t, err)
 

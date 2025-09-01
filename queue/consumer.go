@@ -29,7 +29,7 @@ type Message interface {
 }
 
 type QueueConsumer interface {
-	Consume(context.Context) (<-chan Message, error)
+	Consume(context.Context, chan<- Message) error
 	Close(ctx context.Context) error
 }
 
@@ -85,10 +85,11 @@ func NewConsumer(opts ConsumerOpts) *Consumer {
 }
 
 // Consume from the queue.
-// Blocks until the context is cancelled. When this happens, the Close(ctx) method is called.
+// Blocks until the context is cancelled. When this happens, the Close(ctx) method is called
+// on the consumer driver.
 func (c *Consumer) Consume(ctx context.Context) error {
-	messages, err := c.c.Consume(ctx)
-	if err != nil {
+	messages := make(chan Message, c.opts.Concurrency*2)
+	if err := c.c.Consume(ctx, messages); err != nil {
 		return fmt.Errorf("consume from driver: %w", err)
 	}
 

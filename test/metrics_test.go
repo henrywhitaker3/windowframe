@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestItGetsCounterValues(t *testing.T) {
+func TestItGetsCounterValues(t testing.TB) {
 	counter := prometheus.NewCounter(prometheus.CounterOpts{
 		Name: "bongo",
 	})
@@ -20,7 +20,7 @@ func TestItGetsCounterValues(t *testing.T) {
 	require.Equal(t, float64(5), GetCounterValue(t, counter))
 }
 
-func TestItGetsGaugeValues(t *testing.T) {
+func TestItGetsGaugeValues(t testing.TB) {
 	gauge := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "bongo",
 	})

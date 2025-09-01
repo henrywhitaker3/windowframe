@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func GetCounterValue(t *testing.T, m prometheus.Counter) float64 {
+func GetCounterValue(t testing.TB, m prometheus.Counter) float64 {
 	dto := &dto.Metric{}
 	require.Nil(t, m.Write(dto))
 	unty := dto.GetCounter()
@@ -18,7 +18,7 @@ func GetCounterValue(t *testing.T, m prometheus.Counter) float64 {
 	return *val
 }
 
-func GetGaugeValue(t *testing.T, m prometheus.Gauge) float64 {
+func GetGaugeValue(t testing.TB, m prometheus.Gauge) float64 {
 	dto := &dto.Metric{}
 	require.Nil(t, m.Write(dto))
 	unty := dto.GetGauge()

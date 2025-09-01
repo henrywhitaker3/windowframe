@@ -88,7 +88,10 @@ func NewConsumer(opts ConsumerOpts) (*Consumer, error) {
 	}, nil
 }
 
-func (c *Consumer) Consume(ctx context.Context) (<-chan queue.Message, error) {
+func (c *Consumer) Consume(
+	ctx context.Context,
+	out chan<- queue.Message,
+) error {
 	kv, err := c.js.CreateOrUpdateKeyValue(ctx, jetstream.KeyValueConfig{
 		Bucket:      c.opts.StreamName,
 		Description: "The processed store log for the messages",
@@ -96,13 +99,13 @@ func (c *Consumer) Consume(ctx context.Context) (<-chan queue.Message, error) {
 		Replicas:    c.opts.ProcessedLogReplicas,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create processed log store: %w", err)
+		return fmt.Errorf("create processed log store: %w", err)
 	}
 	c.kv = kv
 
 	stream, err := c.js.Stream(ctx, c.opts.StreamName)
 	if err != nil {
-		return nil, fmt.Errorf("get stream: %w", err)
+		return fmt.Errorf("get stream: %w", err)
 	}
 
 	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
@@ -111,10 +114,8 @@ func (c *Consumer) Consume(ctx context.Context) (<-chan queue.Message, error) {
 		BackOff:    c.opts.Backoff,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create or update consumer: %w", err)
+		return fmt.Errorf("create or update consumer: %w", err)
 	}
-
-	out := make(chan queue.Message, 1000)
 
 	go func() {
 		for {
@@ -137,10 +138,10 @@ func (c *Consumer) Consume(ctx context.Context) (<-chan queue.Message, error) {
 		}
 	}()
 
-	return out, nil
+	return nil
 }
 
-func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out chan queue.Message) {
+func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out chan<- queue.Message) {
 	if c.kv == nil {
 		panic("kv processed log is nil")
 	}

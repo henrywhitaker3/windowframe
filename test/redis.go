@@ -8,7 +8,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
-func Redis(t *testing.T) (int, context.CancelFunc) {
+func Redis(t testing.TB) (int, context.CancelFunc) {
 	redis, err := redis.Run(context.Background(), "redis:7")
 	require.Nil(t, err)
 

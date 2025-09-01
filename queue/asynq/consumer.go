@@ -79,8 +79,7 @@ func (w *Consumer) Close(ctx context.Context) error {
 	return nil
 }
 
-func (w *Consumer) Consume(ctx context.Context) (<-chan queue.Message, error) {
-	out := make(chan queue.Message, 1000)
+func (w *Consumer) Consume(ctx context.Context, out chan<- queue.Message) error {
 	startErr := make(chan error)
 	go func() {
 		err := w.server.Start(asynq.HandlerFunc(func(ctx context.Context, t *asynq.Task) error {
@@ -95,5 +94,5 @@ func (w *Consumer) Consume(ctx context.Context) (<-chan queue.Message, error) {
 		}))
 		startErr <- err
 	}()
-	return out, <-startErr
+	return <-startErr
 }
