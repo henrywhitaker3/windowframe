@@ -336,6 +336,7 @@ func BenchmarkQueueConsumer(b *testing.B) {
 	natsCons, err := nats.NewConsumer(nats.ConsumerOpts{
 		URL:                  natsURL,
 		StreamName:           "demo",
+		ProcessLogEnabled:    nats.Ptr(false),
 		ProcessedLogReplicas: 1,
 	})
 	require.Nil(b, err)
@@ -367,3 +368,8 @@ func BenchmarkQueueConsumer(b *testing.B) {
 	time.Sleep(time.Second * 5)
 	require.Equal(b, count, int(hits.Load()))
 }
+
+// With process log enabled
+// BenchmarkQueueConsumer-10              1        138307389292 ns/op 138 s/op 7246 msgs/s
+// With process log disabled
+// BenchmarkQueueConsumer-10              1        33231343042 ns/op 33 s/op 30303 msgs/s

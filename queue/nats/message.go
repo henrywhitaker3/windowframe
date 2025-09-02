@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/henrywhitaker3/windowframe/queue"
+	"github.com/henrywhitaker3/windowframe/tracing"
 	"github.com/nats-io/nats.go/jetstream"
 )
 
@@ -28,9 +29,12 @@ func (m *message) Job() queue.Job {
 
 func (m *message) Ack(ctx context.Context) error {
 	if m.kv != nil {
+		ctx, span := tracing.NewSpan(ctx, "WriteToProcessedLog")
+		defer span.End()
 		if _, err := m.kv.Create(ctx, m.job.ID, []byte("processed")); err != nil {
 			return fmt.Errorf("log ack: %w", err)
 		}
+		span.End()
 	}
 	return m.msg.DoubleAck(ctx)
 }

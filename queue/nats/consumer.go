@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/henrywhitaker3/windowframe/queue"
+	"github.com/henrywhitaker3/windowframe/tracing"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )
@@ -162,11 +163,14 @@ func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out cha
 	}
 
 	if *c.opts.ProcessLogEnabled {
+		ctx, span := tracing.NewSpan(ctx, "CheckProcessedLog")
+		defer span.End()
 		// If the key exists, then the message has already been processed
 		if _, err := c.kv.Get(ctx, id); err == nil {
 			_ = msg.TermWithReason("message already processed")
 			return
 		}
+		span.End()
 	}
 
 	if untilRaw := msg.Headers().Get(DelayedHeader); untilRaw != "" {
