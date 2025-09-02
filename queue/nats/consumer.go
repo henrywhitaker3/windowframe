@@ -29,6 +29,10 @@ type ConsumerOpts struct {
 	// How long to wait when fetching messages (default: 1s)
 	FetchMaxWait time.Duration
 
+	// Whether to enabled the JetStream KV process log for extra protection
+	// against duplicate message processing (default: true)
+	ProcessLogEnabled *bool
+
 	// How long to keep message processed data in KV store (default: 1h)
 	ProcessedLogTTL time.Duration
 
@@ -52,6 +56,9 @@ func (c ConsumerOpts) withDefaults() ConsumerOpts {
 	}
 	if c.FetchMaxWait == 0 {
 		c.FetchMaxWait = time.Second
+	}
+	if c.ProcessLogEnabled == nil {
+		c.ProcessLogEnabled = Ptr(true)
 	}
 	if c.ProcessedLogTTL == 0 {
 		c.ProcessedLogTTL = time.Hour
@@ -92,20 +99,22 @@ func (c *Consumer) Consume(
 	ctx context.Context,
 	out chan<- queue.Message,
 ) error {
-	kv, err := c.js.CreateOrUpdateKeyValue(ctx, jetstream.KeyValueConfig{
-		Bucket:      c.opts.StreamName,
-		Description: "The processed store log for the messages",
-		TTL:         c.opts.ProcessedLogTTL,
-		Replicas:    c.opts.ProcessedLogReplicas,
-	})
-	if err != nil {
-		return fmt.Errorf("create processed log store: %w", err)
-	}
-	c.kv = kv
-
 	stream, err := c.js.Stream(ctx, c.opts.StreamName)
 	if err != nil {
 		return fmt.Errorf("get stream: %w", err)
+	}
+
+	if *c.opts.ProcessLogEnabled {
+		kv, err := c.js.CreateOrUpdateKeyValue(ctx, jetstream.KeyValueConfig{
+			Bucket:      c.opts.StreamName,
+			Description: "The processed store log for the messages",
+			TTL:         c.opts.ProcessedLogTTL,
+			Replicas:    c.opts.ProcessedLogReplicas,
+		})
+		if err != nil {
+			return fmt.Errorf("create processed log store: %w", err)
+		}
+		c.kv = kv
 	}
 
 	cons, err := stream.CreateOrUpdateConsumer(ctx, jetstream.ConsumerConfig{
@@ -142,7 +151,7 @@ func (c *Consumer) Consume(
 }
 
 func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out chan<- queue.Message) {
-	if c.kv == nil {
+	if *c.opts.ProcessLogEnabled && c.kv == nil {
 		panic("kv processed log is nil")
 	}
 
@@ -152,10 +161,12 @@ func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out cha
 		return
 	}
 
-	// If the key exists, then the message has already been processed
-	if _, err := c.kv.Get(ctx, id); err == nil {
-		_ = msg.TermWithReason("message already processed")
-		return
+	if *c.opts.ProcessLogEnabled {
+		// If the key exists, then the message has already been processed
+		if _, err := c.kv.Get(ctx, id); err == nil {
+			_ = msg.TermWithReason("message already processed")
+			return
+		}
 	}
 
 	if untilRaw := msg.Headers().Get(DelayedHeader); untilRaw != "" {
@@ -177,4 +188,8 @@ func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out cha
 func (c *Consumer) Close(ctx context.Context) error {
 	c.js.Conn().Close()
 	return nil
+}
+
+func Ptr[T any](v T) *T {
+	return &v
 }

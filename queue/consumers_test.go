@@ -21,8 +21,9 @@ import (
 )
 
 const (
-	DemoTask  queue.Task  = "demo"
-	DemoQueue queue.Queue = "demo"
+	DemoTask     queue.Task  = "demo"
+	DemoQueue    queue.Queue = "demo"
+	AnotherQueue queue.Queue = "another"
 )
 
 func TestItProducesAndConsumesJobs(t *testing.T) {
@@ -40,18 +41,25 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 		Retention: jetstream.WorkQueuePolicy,
 		Subjects:  []string{"demo.>"},
 	})
+	test.NatsStream(t, natsURL, jetstream.StreamConfig{
+		Name:      "another",
+		Retention: jetstream.WorkQueuePolicy,
+		Subjects:  []string{"another.>"},
+	})
 
 	tcs := []struct {
 		name         string
 		consumer     func(*testing.T) queue.QueueConsumer
 		producer     func(*testing.T) queue.QueueProducer
+		queue        queue.Queue
 		pushed       int
 		processed    int
 		errored      int
 		deadlettered int
 	}{
 		{
-			name: "asynq",
+			name:  "asynq",
+			queue: DemoQueue,
 			consumer: func(t *testing.T) queue.QueueConsumer {
 				cons, err := asynq.NewConsumer(context.TODO(), asynq.ConsumerOpts{
 					Queues: []queue.Queue{DemoQueue},
@@ -74,12 +82,33 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 			},
 		},
 		{
-			name: "nats",
+			name:  "nats",
+			queue: DemoQueue,
 			consumer: func(t *testing.T) queue.QueueConsumer {
 				cons, err := nats.NewConsumer(nats.ConsumerOpts{
 					URL:                  natsURL,
 					StreamName:           "demo",
 					ProcessedLogReplicas: 1,
+				})
+				require.Nil(t, err)
+				return cons
+			},
+			producer: func(t *testing.T) queue.QueueProducer {
+				prod, err := nats.NewProducer(nats.ProducerOpts{
+					URL: natsURL,
+				})
+				require.Nil(t, err)
+				return prod
+			},
+		},
+		{
+			name:  "nats no process log",
+			queue: AnotherQueue,
+			consumer: func(t *testing.T) queue.QueueConsumer {
+				cons, err := nats.NewConsumer(nats.ConsumerOpts{
+					URL:               natsURL,
+					StreamName:        "another",
+					ProcessLogEnabled: nats.Ptr(false),
 				})
 				require.Nil(t, err)
 				return cons
@@ -131,7 +160,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 						"no-handler",
 						queue.Task("bongo"),
 						[]byte("bongo-no-handler"),
-						queue.OnQueue(DemoQueue),
+						queue.OnQueue(tc.queue),
 					),
 				),
 			)
@@ -144,7 +173,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 						"standard-job",
 						DemoTask,
 						[]byte("bongo"),
-						queue.OnQueue(DemoQueue),
+						queue.OnQueue(tc.queue),
 					),
 				),
 			)
@@ -157,7 +186,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 						"should-deadletter",
 						DemoTask,
 						[]byte("dead"),
-						queue.OnQueue(DemoQueue),
+						queue.OnQueue(tc.queue),
 					),
 				),
 			)
@@ -166,7 +195,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 				t,
 				p.Push(
 					ctx,
-					queue.NewJob("should-skip", DemoTask, []byte("skip"), queue.OnQueue(DemoQueue)),
+					queue.NewJob("should-skip", DemoTask, []byte("skip"), queue.OnQueue(tc.queue)),
 				),
 			)
 
@@ -193,7 +222,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 						"task-after-duratrion",
 						DemoTask,
 						[]byte("bongo-after-duration"),
-						queue.OnQueue(DemoQueue),
+						queue.OnQueue(tc.queue),
 						queue.After(time.Second*10),
 					),
 				),
@@ -207,7 +236,7 @@ func TestItProducesAndConsumesJobs(t *testing.T) {
 						"task-at-time",
 						DemoTask,
 						[]byte("bongo-at-time"),
-						queue.OnQueue(DemoQueue),
+						queue.OnQueue(tc.queue),
 						queue.At(time.Now().Add(time.Second*10)),
 					),
 				),
