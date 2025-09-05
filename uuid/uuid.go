@@ -27,11 +27,28 @@ func (u UUID) MarshalJSON() ([]byte, error) {
 }
 
 func (u *UUID) UnmarshalJSON(data []byte) error {
-	id, err := uuid.Parse(string(data))
+	id, err := Parse(string(data))
 	if err != nil {
 		return err
 	}
-	*u = UUID(id)
+	*u = id
+	return nil
+}
+
+func (u UUID) MarshalYAML() (any, error) {
+	return u.String(), nil
+}
+
+func (u *UUID) UnmarshalYAML(f func(any) error) error {
+	var raw string
+	if err := f(&raw); err != nil {
+		return err
+	}
+	id, err := Parse(raw)
+	if err != nil {
+		return err
+	}
+	*u = id
 	return nil
 }
 

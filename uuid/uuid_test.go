@@ -1,11 +1,13 @@
 package uuid
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestItMakesV7satTime(t *testing.T) {
@@ -48,13 +50,31 @@ func TestItOrderV7AtCorrectly(t *testing.T) {
 	first := time.Now().Add(-time.Minute)
 	last := time.Now()
 
-	firstId := Must(OrderedAt(first))
-	lastId := Must(OrderedAt(last))
+	firstID := Must(OrderedAt(first))
+	lastID := Must(OrderedAt(last))
 
-	ids := []string{lastId.String(), firstId.String()}
+	ids := []string{lastID.String(), firstID.String()}
 
 	slices.Sort(ids)
 
-	require.Equal(t, firstId.String(), ids[0])
-	require.Equal(t, lastId.String(), ids[1])
+	require.Equal(t, firstID.String(), ids[0])
+	require.Equal(t, lastID.String(), ids[1])
+}
+
+func TestItMarshalsToYamlProperly(t *testing.T) {
+	id := Must(New())
+
+	expected := fmt.Sprintf("%s\n", id.String())
+
+	by, err := yaml.Marshal(id)
+	require.Nil(t, err)
+	require.Equal(t, expected, string(by))
+}
+
+func TestItUnmarshalsFromYaml(t *testing.T) {
+	plain := "01991c2b-13f8-7e45-9b2c-ed1230826bc6"
+
+	var id UUID
+	require.Nil(t, yaml.Unmarshal(fmt.Appendf(nil, "%s\n", plain), &id))
+	require.Equal(t, plain, id.String())
 }
