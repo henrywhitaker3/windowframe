@@ -16,7 +16,7 @@ require (
 	github.com/henrywhitaker3/flow v1.11.1
 	github.com/henrywhitaker3/rueidisleader v1.0.7
 	github.com/hibiken/asynq v0.25.1
-	github.com/jackc/pgx/v5 v5.7.5
+	github.com/jackc/pgx/v5 v5.7.6
 	github.com/nats-io/nats.go v1.45.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
