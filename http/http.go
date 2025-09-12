@@ -29,19 +29,20 @@ type HTTPOpts struct {
 
 	ServiceName string
 	Version     string
-	// Process unhandled errors from handlers
-	HandleErrors []func(err error) (int, error, bool)
 	// The publically accessible url of the api. Used for swagger UI
 	PublicURL string
+
+	OpenapiEnabled bool
 
 	Logger log.Logger
 }
 
 type HTTP struct {
-	e      *echo.Echo
-	spec   *openapi3.Reflector
-	logger log.Logger
-	port   int
+	e              *echo.Echo
+	spec           *openapi3.Reflector
+	logger         log.Logger
+	port           int
+	openapiEnabled bool
 
 	handleErrors  []func(err error) (int, error, bool)
 	specMutations []func(*openapi3.Reflector)
@@ -61,30 +62,35 @@ func New(opts HTTPOpts) *HTTP {
 		opts.Logger = log.NullLogger{}
 	}
 	h := &HTTP{
-		e:             e,
-		spec:          &r,
-		port:          opts.Port,
-		validator:     validation.New(),
-		logger:        opts.Logger,
-		handleErrors:  opts.HandleErrors,
-		specMutations: []func(*openapi3.Reflector){},
+		e:              e,
+		spec:           &r,
+		port:           opts.Port,
+		validator:      validation.New(),
+		openapiEnabled: opts.OpenapiEnabled,
+		logger:         opts.Logger,
+		handleErrors:   []func(err error) (int, error, bool){},
+		specMutations:  []func(*openapi3.Reflector){},
 	}
 
 	h.AddSpecMutation(addSpecTypes)
 
 	h.e.HTTPErrorHandler = h.handleError
 
-	h.e.GET("/docs/*", docs.NewSwagger(opts.PublicURL).Handler())
+	if opts.OpenapiEnabled {
+		h.e.GET("/docs/*", docs.NewSwagger(opts.PublicURL).Handler())
+	}
 
 	return h
 }
 
 func (h *HTTP) Start(ctx context.Context) error {
-	schema, err := h.spec.Spec.MarshalYAML()
-	if err != nil {
-		panic(fmt.Errorf("could not marshal openai spec: %w", err))
+	if h.openapiEnabled {
+		schema, err := h.spec.Spec.MarshalYAML()
+		if err != nil {
+			panic(fmt.Errorf("could not marshal openai spec: %w", err))
+		}
+		Register(h, docs.NewSchema(string(schema)))
 	}
-	Register(h, docs.NewSchema(string(schema)))
 	h.logger.Info("starting http server", "port", h.port)
 	if err := h.e.Start(fmt.Sprintf(":%d", h.port)); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
@@ -109,6 +115,14 @@ func (h *HTTP) Routes() []*echo.Route {
 
 func (h *HTTP) AddSpecMutation(funcs ...func(*openapi3.Reflector)) {
 	h.specMutations = append(h.specMutations, funcs...)
+}
+
+func (h *HTTP) HandleErrors(funcs ...func(error) (int, error, bool)) {
+	h.handleErrors = append(h.handleErrors, funcs...)
+}
+
+func (h *HTTP) Use(mw echo.MiddlewareFunc) {
+	h.e.Use(mw)
 }
 
 type Handler[Req any, Resp any] interface {
@@ -228,15 +242,15 @@ func buildSchema[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) error {
 		openapi.WithHTTPStatus(http.StatusUnprocessableEntity),
 	)
 	opctx.AddRespStructure(
-		newError("not found"),
+		NewError("not found"),
 		openapi.WithHTTPStatus(http.StatusNotFound),
 	)
 	opctx.AddRespStructure(
-		newError("unauthorised"),
+		NewError("unauthorised"),
 		openapi.WithHTTPStatus(http.StatusUnauthorized),
 	)
 	opctx.AddRespStructure(
-		newError("forbidden"),
+		NewError("forbidden"),
 		openapi.WithHTTPStatus(http.StatusForbidden),
 	)
 
@@ -260,70 +274,72 @@ func replaceParams(path string) string {
 }
 
 func (h *HTTP) handleError(err error, c echo.Context) {
-	switch true {
-	case errors.Is(err, sql.ErrNoRows):
-		_ = c.JSON(http.StatusNotFound, newError("not found"))
-
-	case errors.Is(err, common.ErrValidation):
-		_ = c.JSON(http.StatusUnprocessableEntity, newError(err.Error()))
-
-	case errors.Is(err, common.ErrBadRequest):
-		_ = c.JSON(http.StatusBadRequest, newError(err.Error()))
-
-	case errors.Is(err, common.ErrUnauth):
-		_ = c.JSON(http.StatusUnauthorized, newError(err.Error()))
-
-	case errors.Is(err, common.ErrForbidden):
-		_ = c.JSON(http.StatusForbidden, newError("fobidden"))
-
-	case errors.Is(err, common.ErrNotFound):
-		_ = c.JSON(http.StatusNotFound, newError("not found"))
-
-	case h.isHTTPError(err):
+	if h.isHTTPError(err) {
 		herr := err.(*echo.HTTPError)
 		_ = c.JSON(herr.Code, herr)
+		return
+	}
 
-	default:
-		pgErr, ok := h.asPgError(err)
-		if ok {
-			switch pgErr.Code {
-			// Unique constraint violation
-			case "23505":
-				_ = c.JSON(
-					http.StatusUnprocessableEntity,
-					newError("a record with the same details already exists"),
-				)
-				return
-			}
+	switch true {
+	case errors.Is(err, sql.ErrNoRows):
+		_ = c.JSON(http.StatusNotFound, NewError("not found"))
+
+	case errors.Is(err, common.ErrValidation):
+		_ = c.JSON(http.StatusUnprocessableEntity, NewError(err.Error()))
+
+	case errors.Is(err, common.ErrBadRequest):
+		_ = c.JSON(http.StatusBadRequest, NewError(err.Error()))
+
+	case errors.Is(err, common.ErrUnauth):
+		_ = c.JSON(http.StatusUnauthorized, NewError(err.Error()))
+
+	case errors.Is(err, common.ErrForbidden):
+		_ = c.JSON(http.StatusForbidden, NewError("fobidden"))
+
+	case errors.Is(err, common.ErrNotFound):
+		_ = c.JSON(http.StatusNotFound, NewError("not found"))
+	}
+
+	validErr := &validation.ValidationError{}
+	if ok := errors.As(err, &validErr); ok {
+		_ = c.JSON(http.StatusUnprocessableEntity, validErr)
+		return
+	}
+
+	pgErr, ok := h.asPgError(err)
+	if ok {
+		switch pgErr.Code {
+		// Unique constraint violation
+		case "23505":
+			_ = c.JSON(
+				http.StatusUnprocessableEntity,
+				NewError("a record with the same details already exists"),
+			)
+			return
 		}
+	}
 
-		validErr := &validation.ValidationError{}
-		if ok := errors.As(err, &validErr); ok {
-			_ = c.JSON(http.StatusUnprocessableEntity, validErr)
+	for _, handler := range h.handleErrors {
+		if code, err, ok := handler(err); ok {
+			_ = c.JSON(code, err)
 			return
 		}
 
-		for _, h := range h.handleErrors {
-			if code, err, ok := h(err); ok {
-				_ = c.JSON(code, err)
-				return
-			}
-		}
-
-		h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
-		if hub := sentryecho.GetHubFromContext(c); hub != nil {
-			hub.CaptureException(err)
-		}
-		h.e.DefaultHTTPErrorHandler(err, c)
 	}
+
+	h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
+	if hub := sentryecho.GetHubFromContext(c); hub != nil {
+		hub.CaptureException(err)
+	}
+	h.e.DefaultHTTPErrorHandler(err, c)
 }
 
-type errorJSON struct {
+type ErrorJSON struct {
 	Message string `json:"message"`
 }
 
-func newError(msg string) errorJSON {
-	return errorJSON{Message: msg}
+func NewError(msg string) ErrorJSON {
+	return ErrorJSON{Message: msg}
 }
 
 func (h *HTTP) isHTTPError(err error) bool {
