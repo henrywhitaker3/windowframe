@@ -14,7 +14,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/grafana/otel-profiling-go v0.5.1
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/henrywhitaker3/boiler v1.4.6
 	github.com/henrywhitaker3/ctxgen v1.0.1
 	github.com/henrywhitaker3/flow v1.11.1
 	github.com/henrywhitaker3/rueidisleader v1.0.7
@@ -23,6 +22,7 @@ require (
 	github.com/labstack/echo-contrib v0.17.4
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/nats-io/nats.go v1.45.0
+	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/redis/go-redis/extra/redisotel/v9 v9.14.0
@@ -170,7 +170,7 @@ require (
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.35.0 // indirect
+	golang.org/x/tools v0.36.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/grpc v1.75.0 // indirect
