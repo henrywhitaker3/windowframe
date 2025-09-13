@@ -35,6 +35,10 @@ func (v *Validator) RegisterTagNameFunc(f validator.TagNameFunc) {
 	v.v.RegisterTagNameFunc(f)
 }
 
+func (v *Validator) RegisterValidation(tag string, f validator.Func) {
+	v.v.RegisterValidation(tag, f)
+}
+
 func (v *Validator) Validate(req any) error {
 	if req == nil {
 		return nil
