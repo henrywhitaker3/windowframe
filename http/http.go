@@ -280,6 +280,14 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 		return
 	}
 
+	for _, handler := range h.handleErrors {
+		if code, err, ok := handler(err); ok {
+			_ = c.JSON(code, err)
+			return
+		}
+
+	}
+
 	switch true {
 	case errors.Is(err, sql.ErrNoRows):
 		_ = c.JSON(http.StatusNotFound, NewError("not found"))
@@ -317,14 +325,6 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 			)
 			return
 		}
-	}
-
-	for _, handler := range h.handleErrors {
-		if code, err, ok := handler(err); ok {
-			_ = c.JSON(code, err)
-			return
-		}
-
 	}
 
 	h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
