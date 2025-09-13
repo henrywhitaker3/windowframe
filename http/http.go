@@ -1,4 +1,4 @@
-// Package http
+// Package httphttp
 package http
 
 import (
@@ -340,6 +340,10 @@ type ErrorJSON struct {
 
 func NewError(msg string) ErrorJSON {
 	return ErrorJSON{Message: msg}
+}
+
+func (e ErrorJSON) Error() string {
+	return e.Message
 }
 
 func (h *HTTP) isHTTPError(err error) bool {
