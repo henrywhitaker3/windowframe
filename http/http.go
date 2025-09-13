@@ -24,6 +24,8 @@ import (
 	"github.com/swaggest/openapi-go/openapi3"
 )
 
+type SpecMutator func(*openapi3.Reflector)
+
 type HTTPOpts struct {
 	Port int
 
@@ -33,6 +35,8 @@ type HTTPOpts struct {
 	PublicURL string
 
 	OpenapiEnabled bool
+
+	SpecMutations []SpecMutator
 
 	Logger log.Logger
 }
@@ -44,8 +48,7 @@ type HTTP struct {
 	port           int
 	openapiEnabled bool
 
-	handleErrors  []func(err error) (int, error, bool)
-	specMutations []func(*openapi3.Reflector)
+	handleErrors []func(err error) (int, error, bool)
 
 	validator *validation.Validator
 }
@@ -61,6 +64,10 @@ func New(opts HTTPOpts) *HTTP {
 	if opts.Logger == nil {
 		opts.Logger = log.NullLogger{}
 	}
+	opts.SpecMutations = append(opts.SpecMutations, addSpecTypes)
+	for _, m := range opts.SpecMutations {
+		m(&r)
+	}
 	h := &HTTP{
 		e:              e,
 		spec:           &r,
@@ -69,10 +76,7 @@ func New(opts HTTPOpts) *HTTP {
 		openapiEnabled: opts.OpenapiEnabled,
 		logger:         opts.Logger,
 		handleErrors:   []func(err error) (int, error, bool){},
-		specMutations:  []func(*openapi3.Reflector){},
 	}
-
-	h.AddSpecMutation(addSpecTypes)
 
 	h.e.HTTPErrorHandler = h.handleError
 
@@ -87,7 +91,7 @@ func (h *HTTP) Start(ctx context.Context) error {
 	if h.openapiEnabled {
 		schema, err := h.spec.Spec.MarshalYAML()
 		if err != nil {
-			panic(fmt.Errorf("could not marshal openai spec: %w", err))
+			return fmt.Errorf("could not marshal openapi spec: %w", err)
 		}
 		Register(h, docs.NewSchema(string(schema)))
 	}
@@ -111,10 +115,6 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *HTTP) Routes() []*echo.Route {
 	return h.e.Routes()
-}
-
-func (h *HTTP) AddSpecMutation(funcs ...func(*openapi3.Reflector)) {
-	h.specMutations = append(h.specMutations, funcs...)
 }
 
 func (h *HTTP) HandleErrors(funcs ...func(error) (int, error, bool)) {
