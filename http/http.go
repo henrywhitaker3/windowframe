@@ -26,6 +26,8 @@ import (
 
 type SpecMutator func(*openapi3.Reflector)
 
+type ErrorHandler func(err error) (int, any, bool)
+
 type HTTPOpts struct {
 	Port int
 
@@ -48,7 +50,7 @@ type HTTP struct {
 	port           int
 	openapiEnabled bool
 
-	handleErrors []func(err error) (int, error, bool)
+	handleErrors []ErrorHandler
 
 	validator *validation.Validator
 }
@@ -75,7 +77,7 @@ func New(opts HTTPOpts) *HTTP {
 		validator:      validation.New(),
 		openapiEnabled: opts.OpenapiEnabled,
 		logger:         opts.Logger,
-		handleErrors:   []func(err error) (int, error, bool){},
+		handleErrors:   []ErrorHandler{},
 	}
 
 	h.e.HTTPErrorHandler = h.handleError
@@ -117,7 +119,7 @@ func (h *HTTP) Routes() []*echo.Route {
 	return h.e.Routes()
 }
 
-func (h *HTTP) HandleErrors(funcs ...func(error) (int, error, bool)) {
+func (h *HTTP) HandleErrors(funcs ...ErrorHandler) {
 	h.handleErrors = append(h.handleErrors, funcs...)
 }
 
@@ -281,8 +283,8 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 	}
 
 	for _, handler := range h.handleErrors {
-		if code, err, ok := handler(err); ok {
-			_ = c.JSON(code, err)
+		if code, resp, ok := handler(err); ok {
+			_ = c.JSON(code, resp)
 			return
 		}
 
