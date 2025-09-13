@@ -52,7 +52,7 @@ type HTTP struct {
 
 	handleErrors []ErrorHandler
 
-	validator *validation.Validator
+	Validator *validation.Validator
 }
 
 func New(opts HTTPOpts) *HTTP {
@@ -74,7 +74,7 @@ func New(opts HTTPOpts) *HTTP {
 		e:              e,
 		spec:           &r,
 		port:           opts.Port,
-		validator:      validation.New(),
+		Validator:      validation.New(),
 		openapiEnabled: opts.OpenapiEnabled,
 		logger:         opts.Logger,
 		handleErrors:   []ErrorHandler{},
@@ -167,7 +167,7 @@ func Register[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) {
 		}
 	}
 
-	reg(handler.Metadata().Path, wrapHandler(h.validator, handler, h.logger), mw...)
+	reg(handler.Metadata().Path, wrapHandler(h.Validator, handler, h.logger), mw...)
 	if handler.Metadata().GenerateSpec {
 		if err := buildSchema(h, handler); err != nil {
 			panic(fmt.Errorf("invalid openapi spec: %w", err))
