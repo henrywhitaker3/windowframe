@@ -17,6 +17,7 @@ import (
 	"github.com/henrywhitaker3/windowframe/log"
 	"github.com/henrywhitaker3/windowframe/tracing"
 	"github.com/henrywhitaker3/windowframe/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/labstack/echo/v4"
 	"github.com/swaggest/jsonschema-go"
@@ -291,6 +292,8 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 	}
 
 	switch true {
+	case errors.Is(err, pgx.ErrNoRows):
+		_ = c.JSON(http.StatusNotFound, NewError("not found"))
 	case errors.Is(err, sql.ErrNoRows):
 		_ = c.JSON(http.StatusNotFound, NewError("not found"))
 
