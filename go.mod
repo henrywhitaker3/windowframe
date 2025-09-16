@@ -6,7 +6,7 @@ require (
 	github.com/XSAM/otelsql v0.40.0
 	github.com/brianvoe/gofakeit/v7 v7.6.0
 	github.com/exaring/otelpgx v0.9.3
-	github.com/getsentry/sentry-go/echo v0.35.2
+	github.com/getsentry/sentry-go/echo v0.35.3
 	github.com/go-co-op/gocron/v2 v2.16.5
 	github.com/go-kit/log v0.2.1
 	github.com/go-playground/validator/v10 v10.27.0
@@ -87,7 +87,7 @@ require (
 	github.com/efficientgo/core v1.0.0-rc.0.0.20221201130417-ba593f67d2a4 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
-	github.com/getsentry/sentry-go v0.35.2 // indirect
+	github.com/getsentry/sentry-go v0.35.3 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
