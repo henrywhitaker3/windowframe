@@ -294,23 +294,30 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 	switch true {
 	case errors.Is(err, pgx.ErrNoRows):
 		_ = c.JSON(http.StatusNotFound, NewError("not found"))
+		return
 	case errors.Is(err, sql.ErrNoRows):
 		_ = c.JSON(http.StatusNotFound, NewError("not found"))
+		return
 
 	case errors.Is(err, common.ErrValidation):
 		_ = c.JSON(http.StatusUnprocessableEntity, NewError(err.Error()))
+		return
 
 	case errors.Is(err, common.ErrBadRequest):
 		_ = c.JSON(http.StatusBadRequest, NewError(err.Error()))
+		return
 
 	case errors.Is(err, common.ErrUnauth):
 		_ = c.JSON(http.StatusUnauthorized, NewError(err.Error()))
+		return
 
 	case errors.Is(err, common.ErrForbidden):
 		_ = c.JSON(http.StatusForbidden, NewError("fobidden"))
+		return
 
 	case errors.Is(err, common.ErrNotFound):
 		_ = c.JSON(http.StatusNotFound, NewError("not found"))
+		return
 	}
 
 	validErr := &validation.ValidationError{}
