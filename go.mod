@@ -7,7 +7,7 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.7.1
 	github.com/exaring/otelpgx v0.9.3
 	github.com/getsentry/sentry-go/echo v0.35.3
-	github.com/go-co-op/gocron/v2 v2.16.5
+	github.com/go-co-op/gocron/v2 v2.16.6
 	github.com/go-kit/log v0.2.1
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/golang-migrate/migrate/v4 v4.19.0
