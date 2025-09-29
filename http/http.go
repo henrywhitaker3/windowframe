@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	sentryecho "github.com/getsentry/sentry-go/echo"
+	"github.com/henrywhitaker3/windowframe/duration"
 	"github.com/henrywhitaker3/windowframe/http/common"
 	"github.com/henrywhitaker3/windowframe/http/handlers/docs"
 	"github.com/henrywhitaker3/windowframe/http/validation"
@@ -382,4 +383,11 @@ func addSpecTypes(r *openapi3.Reflector) {
 	uuidDef.WithExamples("01972d8a-8038-7523-abb5-48a2bc60bedc")
 	uuidDef.WithTitle("UUID")
 	r.AddTypeMapping(uuid.UUID{}, uuidDef)
+
+	strdurDef := jsonschema.Schema{}
+	strdurDef.AddType(jsonschema.String)
+	strdurDef.WithExamples("1s", "1m", "1h", "1d", "23h4m2s")
+	strdurDef.WithTitle("String duration")
+	var eg duration.StringDuration
+	r.AddTypeMapping(eg, strdurDef)
 }

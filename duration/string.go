@@ -1,5 +1,5 @@
 // Package duration
-package common
+package duration
 
 import (
 	"encoding/json"
