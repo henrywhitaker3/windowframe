@@ -262,7 +262,7 @@ func buildSchema[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) error {
 }
 
 var (
-	echoParams = regexp.MustCompile(`:[A-Za-z0-9]+`)
+	echoParams = regexp.MustCompile(`:[A-Za-z0-9-_]+`)
 )
 
 func replaceParams(path string) string {
