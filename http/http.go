@@ -30,15 +30,24 @@ type SpecMutator func(*openapi3.Reflector)
 
 type ErrorHandler func(err error) (int, any, bool)
 
+type OpenapiOpts struct {
+	Enabled        bool
+	ServiceName    string
+	ServiceVersion string
+	PublicURL      string
+
+	BearerAuth []struct {
+		Enabled     bool
+		Name        string
+		Format      string
+		Description string
+	}
+}
+
 type HTTPOpts struct {
 	Port int
 
-	ServiceName string
-	Version     string
-	// The publically accessible url of the api. Used for swagger UI
-	PublicURL string
-
-	OpenapiEnabled bool
+	Openapi OpenapiOpts
 
 	SpecMutations []SpecMutator
 
@@ -64,7 +73,10 @@ func New(opts HTTPOpts) *HTTP {
 
 	r := openapi3.Reflector{}
 	r.Spec = &openapi3.Spec{Openapi: "3.0.3"}
-	r.Spec.Info.WithTitle(opts.ServiceName).WithVersion(opts.Version)
+	r.Spec.Info.WithTitle(opts.Openapi.ServiceName).WithVersion(opts.Openapi.ServiceVersion)
+	for _, b := range opts.Openapi.BearerAuth {
+		r.Spec.SetHTTPBearerTokenSecurity(b.Name, b.Format, b.Description)
+	}
 	if opts.Logger == nil {
 		opts.Logger = log.NullLogger{}
 	}
@@ -77,15 +89,15 @@ func New(opts HTTPOpts) *HTTP {
 		spec:           &r,
 		port:           opts.Port,
 		Validator:      validation.New(),
-		openapiEnabled: opts.OpenapiEnabled,
+		openapiEnabled: opts.Openapi.Enabled,
 		logger:         opts.Logger,
 		handleErrors:   []ErrorHandler{},
 	}
 
 	h.e.HTTPErrorHandler = h.handleError
 
-	if opts.OpenapiEnabled {
-		h.e.GET("/docs/*", docs.NewSwagger(opts.PublicURL).Handler())
+	if opts.Openapi.Enabled {
+		h.e.GET("/docs/*", docs.NewSwagger(opts.Openapi.PublicURL).Handler())
 	}
 
 	return h
