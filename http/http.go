@@ -74,6 +74,9 @@ func New(opts HTTPOpts) *HTTP {
 	r := openapi3.Reflector{}
 	r.Spec = &openapi3.Spec{Openapi: "3.0.3"}
 	r.Spec.Info.WithTitle(opts.Openapi.ServiceName).WithVersion(opts.Openapi.ServiceVersion)
+	r.Spec.Servers = append(r.Spec.Servers, openapi3.Server{
+		URL: opts.Openapi.PublicURL,
+	})
 	for _, b := range opts.Openapi.BearerAuth {
 		r.Spec.SetHTTPBearerTokenSecurity(b.Name, b.Format, b.Description)
 	}
