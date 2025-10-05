@@ -14,6 +14,12 @@ var (
 	KindJSON   = ResponseKind{"json"}
 )
 
+type Auth struct {
+	Enabled bool
+	Name    string
+	Scopes  []string
+}
+
 type Metadata struct {
 	Name         string
 	Description  string
@@ -23,4 +29,5 @@ type Metadata struct {
 	Path         string
 	GenerateSpec bool
 	Kind         ResponseKind
+	Auth         Auth
 }

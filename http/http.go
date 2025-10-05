@@ -272,6 +272,9 @@ func buildSchema[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) error {
 		NewError("forbidden"),
 		openapi.WithHTTPStatus(http.StatusForbidden),
 	)
+	if handler.Metadata().Auth.Enabled {
+		opctx.AddSecurity(handler.Metadata().Auth.Name, handler.Metadata().Auth.Scopes...)
+	}
 
 	return h.spec.AddOperation(opctx)
 }
