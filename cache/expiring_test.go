@@ -20,7 +20,7 @@ func TestItExpiresRecords(t *testing.T) {
 	val, ok := cache.Get(ctx, "bongo")
 	require.True(t, ok)
 	require.Equal(t, "bingo", val)
-	val, ok = cache.Get(ctx, "bingo")
+	val, ok = cache.Get(ctx, "bingo", true)
 	require.True(t, ok)
 	require.Equal(t, "orange", val)
 
