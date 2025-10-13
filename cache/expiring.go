@@ -23,9 +23,12 @@ func NewExpiringCache[T comparable, U any]() *ExpiringCache[T, U] {
 	}
 }
 
-func (e *ExpiringCache[T, U]) Get(ctx context.Context, key T) (U, bool) {
-	_, span := newTrace(ctx, "GetKey", key)
-	defer span.End()
+func (e *ExpiringCache[T, U]) Get(ctx context.Context, key T, disableTracing ...bool) (U, bool) {
+	if len(disableTracing) > 0 && disableTracing[0] {
+		_, span := newTrace(ctx, "GetKey", key)
+		defer span.End()
+	}
+
 	e.mu.RLock()
 	item, ok := e.items[key]
 	e.mu.RUnlock()
@@ -43,9 +46,18 @@ func (e *ExpiringCache[T, U]) Get(ctx context.Context, key T) (U, bool) {
 	return item.item, true
 }
 
-func (e *ExpiringCache[T, U]) Put(ctx context.Context, key T, item U, validity time.Duration) {
-	_, span := newTrace(ctx, "PutKey", key)
-	defer span.End()
+func (e *ExpiringCache[T, U]) Put(
+	ctx context.Context,
+	key T,
+	item U,
+	validity time.Duration,
+	disableTracing ...bool,
+) {
+	if len(disableTracing) > 0 && disableTracing[0] {
+		_, span := newTrace(ctx, "PutKey", key)
+		defer span.End()
+	}
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
@@ -55,9 +67,12 @@ func (e *ExpiringCache[T, U]) Put(ctx context.Context, key T, item U, validity t
 	}
 }
 
-func (e *ExpiringCache[T, U]) Delete(ctx context.Context, key T) {
-	_, span := newTrace(ctx, "DeleteKey", key)
-	defer span.End()
+func (e *ExpiringCache[T, U]) Delete(ctx context.Context, key T, disableTracing ...bool) {
+	if len(disableTracing) > 0 && disableTracing[0] {
+		_, span := newTrace(ctx, "DeleteKey", key)
+		defer span.End()
+	}
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	delete(e.items, key)

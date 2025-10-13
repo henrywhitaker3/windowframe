@@ -4,16 +4,14 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	lru "github.com/hashicorp/golang-lru/v2"
 )
 
 type LruCacheExpiring[T comparable, U any] struct {
-	cache *lru.Cache[T, expiringItem[U]]
+	cache *LruCache[T, expiringItem[U]]
 }
 
 func NewLruCacheExpiring[T comparable, U any](size int) (*LruCacheExpiring[T, U], error) {
-	cache, err := lru.New[T, expiringItem[U]](size)
+	cache, err := NewLruCache[T, expiringItem[U]](size)
 	if err != nil {
 		return nil, fmt.Errorf("init lru cache: %w", err)
 	}
@@ -22,10 +20,8 @@ func NewLruCacheExpiring[T comparable, U any](size int) (*LruCacheExpiring[T, U]
 	}, nil
 }
 
-func (l *LruCacheExpiring[T, U]) Get(ctx context.Context, key T) (U, bool) {
-	ctx, span := newTrace(ctx, "GetKey", key)
-	defer span.End()
-	item, ok := l.cache.Get(key)
+func (l *LruCacheExpiring[T, U]) Get(ctx context.Context, key T, disableTracing ...bool) (U, bool) {
+	item, ok := l.cache.Get(ctx, key, disableTracing...)
 	if !ok {
 		return item.item, ok
 	}
@@ -36,19 +32,21 @@ func (l *LruCacheExpiring[T, U]) Get(ctx context.Context, key T) (U, bool) {
 	return item.item, true
 }
 
-func (l *LruCacheExpiring[T, U]) Put(ctx context.Context, key T, val U, validity time.Duration) {
-	_, span := newTrace(ctx, "PutKey", key)
-	defer span.End()
-	l.cache.Add(key, expiringItem[U]{
+func (l *LruCacheExpiring[T, U]) Put(
+	ctx context.Context,
+	key T,
+	val U,
+	validity time.Duration,
+	disableTracing ...bool,
+) {
+	l.cache.Put(ctx, key, expiringItem[U]{
 		item:    val,
 		expires: now().Add(validity),
-	})
+	}, disableTracing...)
 }
 
-func (l *LruCacheExpiring[T, U]) Delete(ctx context.Context, key T) {
-	_, span := newTrace(ctx, "Delete", key)
-	defer span.End()
-	l.cache.Remove(key)
+func (l *LruCacheExpiring[T, U]) Delete(ctx context.Context, key T, disableTracing ...bool) {
+	l.cache.Delete(ctx, key, disableTracing...)
 }
 
 func (l *LruCacheExpiring[T, U]) Len() int {

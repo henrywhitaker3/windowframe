@@ -21,21 +21,30 @@ func NewLruCache[T comparable, U any](size int) (*LruCache[T, U], error) {
 	}, nil
 }
 
-func (l *LruCache[T, U]) Get(ctx context.Context, key T) (U, bool) {
-	_, span := newTrace(ctx, "GetKey", key)
-	defer span.End()
+func (l *LruCache[T, U]) Get(ctx context.Context, key T, disableTracing ...bool) (U, bool) {
+	if len(disableTracing) > 0 && disableTracing[0] {
+		_, span := newTrace(ctx, "GetKey", key)
+		defer span.End()
+	}
+
 	return l.cache.Get(key)
 }
 
-func (l *LruCache[T, U]) Put(ctx context.Context, key T, val U) {
-	_, span := newTrace(ctx, "PutKey", key)
-	defer span.End()
+func (l *LruCache[T, U]) Put(ctx context.Context, key T, val U, disableTracing ...bool) {
+	if len(disableTracing) > 0 && disableTracing[0] {
+		_, span := newTrace(ctx, "PutKey", key)
+		defer span.End()
+	}
+
 	l.cache.Add(key, val)
 }
 
-func (l *LruCache[T, U]) Delete(ctx context.Context, key T) {
-	_, span := newTrace(ctx, "Delete", key)
-	defer span.End()
+func (l *LruCache[T, U]) Delete(ctx context.Context, key T, disableTracing ...bool) {
+	if len(disableTracing) > 0 && disableTracing[0] {
+		_, span := newTrace(ctx, "Delete", key)
+		defer span.End()
+	}
+
 	l.cache.Remove(key)
 }
 
