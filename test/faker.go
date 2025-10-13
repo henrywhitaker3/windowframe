@@ -1,9 +1,13 @@
 package test
 
-import "github.com/brianvoe/gofakeit/v7"
+import (
+	"strings"
+
+	"github.com/brianvoe/gofakeit/v7"
+)
 
 func init() {
-	gofakeit.Seed(0)
+	_ = gofakeit.Seed(0)
 }
 
 func Word() string {
@@ -11,7 +15,18 @@ func Word() string {
 }
 
 func Sentence(words int) string {
-	return gofakeit.Sentence(words)
+	out := []string{}
+	for len(out) < words {
+		tmp := strings.Split(gofakeit.Sentence(), " ")
+		i := 0
+		for len(out) < words {
+			if len(tmp) <= i {
+				break
+			}
+			out = append(out, tmp[i])
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 func Email() string {
