@@ -20,8 +20,8 @@ func NewLruCacheExpiring[T comparable, U any](size int) (*LruCacheExpiring[T, U]
 	}, nil
 }
 
-func (l *LruCacheExpiring[T, U]) Get(ctx context.Context, key T, disableTracing ...bool) (U, bool) {
-	item, ok := l.cache.Get(ctx, key, disableTracing...)
+func (l *LruCacheExpiring[T, U]) Get(ctx context.Context, key T, enableTracing ...bool) (U, bool) {
+	item, ok := l.cache.Get(ctx, key, enableTracing...)
 	if !ok {
 		return item.item, ok
 	}
@@ -37,16 +37,16 @@ func (l *LruCacheExpiring[T, U]) Put(
 	key T,
 	val U,
 	validity time.Duration,
-	disableTracing ...bool,
+	enableTracing ...bool,
 ) {
 	l.cache.Put(ctx, key, expiringItem[U]{
 		item:    val,
 		expires: now().Add(validity),
-	}, disableTracing...)
+	}, enableTracing...)
 }
 
-func (l *LruCacheExpiring[T, U]) Delete(ctx context.Context, key T, disableTracing ...bool) {
-	l.cache.Delete(ctx, key, disableTracing...)
+func (l *LruCacheExpiring[T, U]) Delete(ctx context.Context, key T, enableTracing ...bool) {
+	l.cache.Delete(ctx, key, enableTracing...)
 }
 
 func (l *LruCacheExpiring[T, U]) Len() int {

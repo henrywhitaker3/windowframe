@@ -23,8 +23,8 @@ func NewExpiringCache[T comparable, U any]() *ExpiringCache[T, U] {
 	}
 }
 
-func (e *ExpiringCache[T, U]) Get(ctx context.Context, key T, disableTracing ...bool) (U, bool) {
-	if len(disableTracing) > 0 && disableTracing[0] {
+func (e *ExpiringCache[T, U]) Get(ctx context.Context, key T, enableTracing ...bool) (U, bool) {
+	if len(enableTracing) > 0 && enableTracing[0] {
 		_, span := newTrace(ctx, "GetKey", key)
 		defer span.End()
 	}
@@ -51,9 +51,9 @@ func (e *ExpiringCache[T, U]) Put(
 	key T,
 	item U,
 	validity time.Duration,
-	disableTracing ...bool,
+	enableTracing ...bool,
 ) {
-	if len(disableTracing) > 0 && disableTracing[0] {
+	if len(enableTracing) > 0 && enableTracing[0] {
 		_, span := newTrace(ctx, "PutKey", key)
 		defer span.End()
 	}
@@ -67,8 +67,8 @@ func (e *ExpiringCache[T, U]) Put(
 	}
 }
 
-func (e *ExpiringCache[T, U]) Delete(ctx context.Context, key T, disableTracing ...bool) {
-	if len(disableTracing) > 0 && disableTracing[0] {
+func (e *ExpiringCache[T, U]) Delete(ctx context.Context, key T, enableTracing ...bool) {
+	if len(enableTracing) > 0 && enableTracing[0] {
 		_, span := newTrace(ctx, "DeleteKey", key)
 		defer span.End()
 	}
