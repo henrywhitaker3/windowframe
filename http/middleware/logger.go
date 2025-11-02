@@ -35,6 +35,9 @@ func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 					"bytes_in", bytesIn(c),
 					"bytes_out", bytesOut(c),
 				)
+			if traceID := tracing.TraceID(ctx); traceID != "" {
+				logger = logger.With("trace_id", traceID)
+			}
 
 			for _, f := range mut {
 				logger = f(ctx, logger)
