@@ -15,6 +15,7 @@ func Logger() echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			start := time.Now()
 			err := next(c)
+			c.Error(err)
 			ctx, span := tracing.NewSpan(c.Request().Context(), "LogRequest")
 			defer span.End()
 			dur := time.Since(start)
@@ -32,7 +33,6 @@ func Logger() echo.MiddlewareFunc {
 					"bytes_out", bytesOut(c),
 				)
 			if err != nil {
-				c.Error(err)
 				if c.Response().Status >= 500 {
 					logger = logger.With("error", err.Error())
 				}
