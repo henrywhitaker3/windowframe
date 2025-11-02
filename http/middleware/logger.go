@@ -10,7 +10,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func Logger() echo.MiddlewareFunc {
+type LogAttributesFunc = func(*slog.Logger) *slog.Logger
+
+func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			start := time.Now()
@@ -32,6 +34,11 @@ func Logger() echo.MiddlewareFunc {
 					"bytes_in", bytesIn(c),
 					"bytes_out", bytesOut(c),
 				)
+
+			for _, f := range mut {
+				logger = f(logger)
+			}
+
 			if err != nil {
 				if c.Response().Status >= 500 {
 					logger = logger.With("error", err.Error())
