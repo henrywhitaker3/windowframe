@@ -2,6 +2,7 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"strconv"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type LogAttributesFunc = func(*slog.Logger) *slog.Logger
+type LogAttributesFunc = func(context.Context, *slog.Logger) *slog.Logger
 
 func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -36,7 +37,7 @@ func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 				)
 
 			for _, f := range mut {
-				logger = f(logger)
+				logger = f(ctx, logger)
 			}
 
 			if err != nil {
