@@ -94,3 +94,23 @@ func SetUserRefreshTokenCookie(c echo.Context, domain string, token string) {
 		Expires:  time.Now().Add(time.Hour * 24 * 30),
 	})
 }
+
+type AuthMethod string
+
+const (
+	authMethodKey            = "auth_method"
+	User          AuthMethod = "user"
+	Team          AuthMethod = "team"
+	Unknown       AuthMethod = "unknown"
+)
+
+func GetAuthMethod(ctx context.Context) AuthMethod {
+	if method, ok := ctxgen.ValueOk[AuthMethod](ctx, authMethodKey); ok {
+		return method
+	}
+	return Unknown
+}
+
+func SetAuthMethod(ctx context.Context, method AuthMethod) context.Context {
+	return ctxgen.WithValue(ctx, authMethodKey, method)
+}
