@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -60,12 +61,12 @@ func GetToken(req *http.Request) string {
 	return ""
 }
 
-func GetRefreshToken(req *http.Request) string {
+func GetRefreshToken(req *http.Request) (string, error) {
 	cookie, err := req.Cookie(UserRefreshToken)
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("get refresh token from cookie: %w", err)
 	}
-	return cookie.Value
+	return cookie.Value, nil
 }
 
 func SetUserAuthCookie(c echo.Context, domain string, token string) {
