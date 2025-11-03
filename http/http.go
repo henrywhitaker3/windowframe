@@ -296,6 +296,10 @@ func replaceParams(path string) string {
 }
 
 func (h *HTTP) handleError(err error, c echo.Context) {
+	if err == nil {
+		return
+	}
+
 	if h.isHTTPError(err) {
 		herr := err.(*echo.HTTPError)
 		_ = c.JSON(herr.Code, herr)
@@ -359,7 +363,7 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 	}
 
 	h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
-	if hub := sentryecho.GetHubFromContext(c); hub != nil {
+	if hub := sentryecho.GetHubFromContext(c); hub != nil && err != nil {
 		hub.CaptureException(err)
 	}
 	h.e.DefaultHTTPErrorHandler(err, c)
