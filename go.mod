@@ -35,9 +35,9 @@ require (
 	github.com/swaggest/jsonschema-go v0.3.78
 	github.com/swaggest/openapi-go v0.2.60
 	github.com/swaggo/http-swagger/v2 v2.0.2
-	github.com/testcontainers/testcontainers-go v0.39.0
-	github.com/testcontainers/testcontainers-go/modules/nats v0.39.0
-	github.com/testcontainers/testcontainers-go/modules/redis v0.39.0
+	github.com/testcontainers/testcontainers-go v0.40.0
+	github.com/testcontainers/testcontainers-go/modules/nats v0.40.0
+	github.com/testcontainers/testcontainers-go/modules/redis v0.40.0
 	github.com/thanos-io/objstore v0.0.0-20250813080715-4e5fd4289b50
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.63.0
 	go.opentelemetry.io/otel v1.38.0
@@ -79,7 +79,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v28.3.3+incompatible // indirect
+	github.com/docker/docker v28.5.1+incompatible // indirect
 	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -100,7 +100,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
