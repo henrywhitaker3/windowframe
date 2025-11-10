@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/getsentry/sentry-go"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -17,11 +18,13 @@ type ConsumerObserver struct {
 	JobsSkipped          *prometheus.CounterVec
 
 	logger *slog.Logger
+	sentry SentryOpts
 }
 
 type ConsumerObserverOpts struct {
 	Logger *slog.Logger
 	Reg    prometheus.Registerer
+	Sentry SentryOpts
 }
 
 func NewConsumerObserver(opts ConsumerObserverOpts) *ConsumerObserver {
@@ -47,6 +50,7 @@ func NewConsumerObserver(opts ConsumerObserverOpts) *ConsumerObserver {
 			Help: "The number of jobs that failed and were skipped/removed from the queue",
 		}, []string{"task"}),
 		logger: opts.Logger,
+		sentry: opts.Sentry,
 	}
 
 	if opts.Reg != nil {
@@ -57,7 +61,31 @@ func NewConsumerObserver(opts ConsumerObserverOpts) *ConsumerObserver {
 		_ = opts.Reg.Register(o.JobsSkipped)
 	}
 
+	o.sentry.Skipper = append(o.sentry.Skipper, func(err error) bool {
+		return errors.Is(err, ErrDeadLetter)
+	})
+	o.sentry.Skipper = append(o.sentry.Skipper, func(err error) bool {
+		return errors.Is(err, ErrSkipRetry)
+	})
+
 	return o
+}
+
+func (o *ConsumerObserver) observeStart(ctx context.Context, job Job) context.Context {
+	if !o.sentry.Enabled {
+		return ctx
+	}
+
+	hub := sentry.GetHubFromContext(ctx)
+	if hub == nil {
+		hub = sentry.CurrentHub().Clone()
+	}
+
+	if client := hub.Client(); client != nil {
+		client.SetSDKIdentifier("sentry.go.windowframe")
+	}
+
+	return sentry.SetHubOnContext(ctx, hub)
 }
 
 func (o *ConsumerObserver) observeSuccess(ctx context.Context, job Job, start time.Time) {
@@ -102,5 +130,8 @@ func (o *ConsumerObserver) observeError(ctx context.Context, job Job, start time
 	}
 	if errors.Is(err, ErrSkipRetry) {
 		o.JobsSkipped.WithLabelValues(string(job.Task)).Inc()
+	}
+	if o.sentry.Enabled {
+		o.reportError(ctx, err)
 	}
 }
