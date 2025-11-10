@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/XSAM/otelsql v0.40.0
-	github.com/brianvoe/gofakeit/v7 v7.8.2
+	github.com/brianvoe/gofakeit/v7 v7.9.0
 	github.com/exaring/otelpgx v0.9.3
 	github.com/getsentry/sentry-go/echo v0.36.2
 	github.com/go-co-op/gocron/v2 v2.17.0
