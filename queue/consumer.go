@@ -126,6 +126,8 @@ func (c *Consumer) handler(ctx context.Context, msg Message) error {
 	ctx, span := tracing.NewSpan(ctx, "HandleTask", trace.WithSpanKind(trace.SpanKindConsumer))
 	defer span.End()
 
+	ctx = c.obs.observeStart(ctx, msg.Job())
+
 	span.SetAttributes(attribute.String("task", string(msg.Job().Task)))
 
 	start := time.Now()
