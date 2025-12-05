@@ -14,6 +14,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/google/uuid v1.6.0
 	github.com/grafana/otel-profiling-go v0.5.1
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/henrywhitaker3/ctxgen v1.0.1
 	github.com/henrywhitaker3/flow v1.11.1
@@ -47,6 +48,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.38.0
 	go.opentelemetry.io/otel/trace v1.38.0
 	golang.org/x/crypto v0.45.0
+	google.golang.org/grpc v1.75.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -172,7 +174,6 @@ require (
 	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250825161204-c5933d9347a5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect
-	google.golang.org/grpc v1.75.0 // indirect
 	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
