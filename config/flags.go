@@ -143,6 +143,13 @@ func getFieldValue(flags *pflag.FlagSet, field reflect.StructField, tag string) 
 		}
 		value = val
 
+	case reflect.Slice:
+		vals, err := flags.GetStringSlice(tag)
+		if err != nil {
+			return nil, parseError(field.Name, "slice", err)
+		}
+		value = vals
+
 	default:
 		return nil, fmt.Errorf("unhandled field type %s", field.Type.Kind().String())
 	}
