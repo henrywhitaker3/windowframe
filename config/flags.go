@@ -136,6 +136,13 @@ func getFieldValue(flags *pflag.FlagSet, field reflect.StructField, tag string) 
 		}
 		value = in
 
+	case reflect.Bool:
+		val, err := flags.GetBool(tag)
+		if err != nil {
+			return nil, parseError(field.Name, "bool", err)
+		}
+		value = val
+
 	default:
 		return nil, fmt.Errorf("unhandled field type %s", field.Type.Kind().String())
 	}

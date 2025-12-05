@@ -20,6 +20,7 @@ func TestItParsesPFlag(t *testing.T) {
 	set.Float64("some-float-64", 0, "A float64 flag")
 	set.Duration("some-duration", 0, "A duration flag")
 	set.Int("nested-int", 0, "A nested int flag")
+	set.Bool("a-bool", false, "some bool")
 	require.Nil(t, set.Parse([]string{
 		"--some-field", "bongo",
 		"--some-int", "6",
@@ -31,6 +32,7 @@ func TestItParsesPFlag(t *testing.T) {
 		"--some-float-64", "1.2",
 		"--some-duration", "1s",
 		"--nested-int", "5",
+		"--a-bool", "true",
 	}))
 
 	e := NewPFlagExtractor[DummyConfig](set)

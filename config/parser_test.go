@@ -20,6 +20,7 @@ type DummyConfig struct {
 	SomeStruct   struct {
 		NestedInt int `flag:"nested-int"`
 	}
+	ABool bool `                                             flag:"a-bool"`
 }
 
 func TestItParsesMultipleExtractors(t *testing.T) {
