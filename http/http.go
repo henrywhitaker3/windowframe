@@ -300,6 +300,10 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 		return
 	}
 
+	if c.Response().Committed {
+		return
+	}
+
 	if h.isHTTPError(err) {
 		herr := err.(*echo.HTTPError)
 		_ = c.JSON(herr.Code, herr)
