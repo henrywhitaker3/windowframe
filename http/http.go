@@ -305,9 +305,11 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 		return
 	}
 
-	h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
-	if hub := sentryecho.GetHubFromContext(c); hub != nil && err != nil {
-		hub.CaptureException(err)
+	if !isHTTPError(err) {
+		h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
+		if hub := sentryecho.GetHubFromContext(c); hub != nil && err != nil {
+			hub.CaptureException(err)
+		}
 	}
 	h.e.DefaultHTTPErrorHandler(err, c)
 }
