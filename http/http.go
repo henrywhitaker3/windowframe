@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -301,77 +302,72 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 	}
 
 	if !c.Response().Committed {
-		if h.isHTTPError(err) {
-			herr := err.(*echo.HTTPError)
-			_ = c.JSON(herr.Code, herr)
+		code, resp, handled := h.getErrorCodeAndResponse(err)
+		slog.Info("got resp", "code", code, "resp", resp, "handled", handled)
+		if handled {
+			_ = c.JSON(code, resp)
 			return
 		}
-
-		for _, handler := range h.handleErrors {
-			if code, resp, ok := handler(err); ok {
-				_ = c.JSON(code, resp)
-				return
-			}
-
+		h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
+		if hub := sentryecho.GetHubFromContext(c); hub != nil && err != nil {
+			hub.CaptureException(err)
 		}
-
-		switch true {
-		case errors.Is(err, pgx.ErrNoRows):
-			_ = c.JSON(http.StatusNotFound, NewError("not found"))
-			return
-		case errors.Is(err, sql.ErrNoRows):
-			_ = c.JSON(http.StatusNotFound, NewError("not found"))
-			return
-
-		case errors.Is(err, common.ErrValidation):
-			_ = c.JSON(http.StatusUnprocessableEntity, NewError(err.Error()))
-			return
-
-		case errors.Is(err, common.ErrBadRequest):
-			_ = c.JSON(http.StatusBadRequest, NewError(err.Error()))
-			return
-
-		case errors.Is(err, common.ErrUnauth):
-			_ = c.JSON(http.StatusUnauthorized, NewError(err.Error()))
-			return
-
-		case errors.Is(err, common.ErrForbidden):
-			_ = c.JSON(http.StatusForbidden, NewError("fobidden"))
-			return
-
-		case errors.Is(err, common.ErrNotFound):
-			_ = c.JSON(http.StatusNotFound, NewError("not found"))
-			return
-		}
-
-		validErr := &validation.ValidationError{}
-		if ok := errors.As(err, &validErr); ok {
-			_ = c.JSON(http.StatusUnprocessableEntity, validErr)
-			return
-		}
-
-		pgErr, ok := h.asPgError(err)
-		if ok {
-			switch pgErr.Code {
-			// Unique constraint violation
-			case "23505":
-				_ = c.JSON(
-					http.StatusUnprocessableEntity,
-					NewError("a record with the same details already exists"),
-				)
-				return
-			}
-		}
-	}
-
-	h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
-	if hub := sentryecho.GetHubFromContext(c); hub != nil && err != nil {
-		hub.CaptureException(err)
-	}
-
-	if !c.Response().Committed {
 		h.e.DefaultHTTPErrorHandler(err, c)
 	}
+}
+
+func (h *HTTP) getErrorCodeAndResponse(err error) (int, any, bool) {
+	if h.isHTTPError(err) {
+		herr := err.(*echo.HTTPError)
+		return herr.Code, herr, true
+	}
+
+	for _, handler := range h.handleErrors {
+		if code, resp, ok := handler(err); ok {
+			return code, resp, true
+		}
+
+	}
+
+	switch true {
+	case errors.Is(err, pgx.ErrNoRows):
+		return http.StatusNotFound, NewError("not found"), true
+	case errors.Is(err, sql.ErrNoRows):
+		return http.StatusNotFound, NewError("not found"), true
+
+	case errors.Is(err, common.ErrValidation):
+		return http.StatusUnprocessableEntity, NewError(err.Error()), true
+
+	case errors.Is(err, common.ErrBadRequest):
+		return http.StatusBadRequest, NewError(err.Error()), true
+
+	case errors.Is(err, common.ErrUnauth):
+		return http.StatusUnauthorized, NewError(err.Error()), true
+
+	case errors.Is(err, common.ErrForbidden):
+		return http.StatusForbidden, NewError("fobidden"), true
+
+	case errors.Is(err, common.ErrNotFound):
+		return http.StatusNotFound, NewError("not found"), true
+	}
+
+	validErr := &validation.ValidationError{}
+	if ok := errors.As(err, &validErr); ok {
+		return http.StatusUnprocessableEntity, validErr, true
+	}
+
+	pgErr, ok := h.asPgError(err)
+	if ok {
+		switch pgErr.Code {
+		// Unique constraint violation
+		case "23505":
+			return http.StatusUnprocessableEntity, NewError(
+				"a record with the same details already exists",
+			), true
+		}
+	}
+
+	return http.StatusServiceUnavailable, nil, false
 }
 
 type ErrorJSON struct {

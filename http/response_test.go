@@ -7,13 +7,15 @@ import (
 	"testing"
 
 	"github.com/henrywhitaker3/windowframe/http/common"
+	"github.com/henrywhitaker3/windowframe/test"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/require"
 )
 
 func TestItReturnsJSONErrorsFromHandlers(t *testing.T) {
 	srv := New(HTTPOpts{
-		Port: 0,
+		Port:   0,
+		Logger: test.NewLogger(t),
 	})
 
 	srv.HandleErrors(func(err error) (int, any, bool) {
