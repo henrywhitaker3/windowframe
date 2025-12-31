@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -26,7 +27,9 @@ func TestItReturnsJSONErrorsFromHandlers(t *testing.T) {
 		return http.StatusForbidden, map[string]string{"message": "forbidden"}, true
 	})
 
-	Register(srv, &dummyHandler{})
+	Register(srv, &dummyHandler{
+		err: fmt.Errorf("some error"),
+	})
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -41,15 +44,54 @@ func TestItReturnsJSONErrorsFromHandlers(t *testing.T) {
 	require.NotContains(
 		t,
 		buf.String(),
-		`test_request_size_bytes_count{code="500",host="example.com",method="GET",url="/"} 1`,
+		`test_request_total{code="500",host="example.com",method="GET",url="/"} 1`,
 	)
 }
 
-type dummyHandler struct{}
+func TestItReturnsValidationErrorsProperly(t *testing.T) {
+	srv := New(HTTPOpts{
+		Port:   0,
+		Logger: test.NewLogger(t),
+	})
+	reg := prometheus.NewRegistry()
+	srv.Use(echoprometheus.NewMiddlewareWithConfig(echoprometheus.MiddlewareConfig{
+		Registerer: reg,
+		Subsystem:  "test",
+	}))
 
-func (d *dummyHandler) Handler() common.Handler[any, any] {
-	return func(c echo.Context, req any) (*any, error) {
-		return nil, fmt.Errorf("some error")
+	Register(srv, &dummyHandler{})
+
+	rec := httptest.NewRecorder()
+	body, err := json.Marshal(dummyRequest{AField: "bongo"})
+	require.Nil(t, err)
+	req := httptest.NewRequest(http.MethodGet, "/", bytes.NewReader(body))
+	req.Header.Add("Content-Type", "application/json")
+	srv.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	var buf bytes.Buffer
+	require.Nil(t, echoprometheus.WriteGatheredMetrics(&buf, reg))
+	require.NotContains(
+		t,
+		buf.String(),
+		`test_request_total{code="422",host="example.com",method="GET",url="/"} 1`,
+	)
+}
+
+type dummyHandler struct {
+	err error
+}
+
+type dummyRequest struct {
+	AField string `validate:"uppercase"`
+}
+
+func (d *dummyHandler) Handler() common.Handler[dummyRequest, any] {
+	return func(c echo.Context, req dummyRequest) (*any, error) {
+		if d.err == nil {
+			return nil, nil
+		}
+		return nil, d.err
 	}
 }
 
