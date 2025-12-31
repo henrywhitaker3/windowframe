@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -70,6 +71,10 @@ func GetRefreshToken(req *http.Request) (string, error) {
 }
 
 func SetUserAuthCookie(c echo.Context, domain string, token string) {
+	url, err := url.Parse(domain)
+	if err == nil && url.Hostname() != "" {
+		domain = url.Hostname()
+	}
 	c.SetCookie(&http.Cookie{
 		Name:     UserAuthCookie,
 		Value:    token,
@@ -78,11 +83,15 @@ func SetUserAuthCookie(c echo.Context, domain string, token string) {
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteNoneMode,
-		Expires:  time.Now().Add(time.Minute * 5),
+		Expires:  time.Now().Add(time.Hour * 24 * 30),
 	})
 }
 
 func SetUserRefreshTokenCookie(c echo.Context, domain string, token string) {
+	url, err := url.Parse(domain)
+	if err == nil && url.Hostname() != "" {
+		domain = url.Hostname()
+	}
 	c.SetCookie(&http.Cookie{
 		Name:     UserRefreshToken,
 		Value:    token,
