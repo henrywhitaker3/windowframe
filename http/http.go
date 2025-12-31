@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -185,7 +184,7 @@ func Register[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) {
 		}
 	}
 
-	reg(handler.Metadata().Path, wrapHandler(h.Validator, handler, h.logger), mw...)
+	reg(handler.Metadata().Path, wrapHandler(h, handler, h.logger), mw...)
 	if handler.Metadata().GenerateSpec {
 		if err := buildSchema(h, handler); err != nil {
 			panic(fmt.Errorf("invalid openapi spec: %w", err))
@@ -194,7 +193,7 @@ func Register[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) {
 }
 
 func wrapHandler[Req any, Resp any](
-	v *validation.Validator,
+	ht *HTTP,
 	h Handler[Req, Resp],
 	logger log.Logger,
 ) echo.HandlerFunc {
@@ -212,13 +211,16 @@ func wrapHandler[Req any, Resp any](
 
 		_, span = tracing.NewSpan(c.Request().Context(), "ValidateRequest")
 		defer span.End()
-		if err := v.Validate(req); err != nil {
+		if err := ht.Validator.Validate(req); err != nil {
 			return err
 		}
 		span.End()
 
 		resp, err := handler(c, req)
 		if err != nil {
+			if code, resp, handled := ht.getErrorCodeAndResponse(err); handled {
+				return c.JSON(code, resp)
+			}
 			return err
 		}
 
@@ -297,27 +299,19 @@ func replaceParams(path string) string {
 }
 
 func (h *HTTP) handleError(err error, c echo.Context) {
-	if err == nil {
+	if err == nil || c.Response().Committed {
 		return
 	}
 
-	if !c.Response().Committed {
-		code, resp, handled := h.getErrorCodeAndResponse(err)
-		slog.Info("got resp", "code", code, "resp", resp, "handled", handled)
-		if handled {
-			_ = c.JSON(code, resp)
-			return
-		}
-		h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
-		if hub := sentryecho.GetHubFromContext(c); hub != nil && err != nil {
-			hub.CaptureException(err)
-		}
-		h.e.DefaultHTTPErrorHandler(err, c)
+	h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
+	if hub := sentryecho.GetHubFromContext(c); hub != nil && err != nil {
+		hub.CaptureException(err)
 	}
+	h.e.DefaultHTTPErrorHandler(err, c)
 }
 
 func (h *HTTP) getErrorCodeAndResponse(err error) (int, any, bool) {
-	if h.isHTTPError(err) {
+	if isHTTPError(err) {
 		herr := err.(*echo.HTTPError)
 		return herr.Code, herr, true
 	}
@@ -356,7 +350,7 @@ func (h *HTTP) getErrorCodeAndResponse(err error) (int, any, bool) {
 		return http.StatusUnprocessableEntity, validErr, true
 	}
 
-	pgErr, ok := h.asPgError(err)
+	pgErr, ok := asPgError(err)
 	if ok {
 		switch pgErr.Code {
 		// Unique constraint violation
@@ -382,7 +376,7 @@ func (e ErrorJSON) Error() string {
 	return e.Message
 }
 
-func (h *HTTP) isHTTPError(err error) bool {
+func isHTTPError(err error) bool {
 	switch err.(type) {
 	case *echo.HTTPError:
 		return true
@@ -391,7 +385,7 @@ func (h *HTTP) isHTTPError(err error) bool {
 	}
 }
 
-func (h *HTTP) asPgError(err error) (*pgconn.PgError, bool) {
+func asPgError(err error) (*pgconn.PgError, bool) {
 	var pg *pgconn.PgError
 	if errors.As(err, &pg) {
 		return pg, true
