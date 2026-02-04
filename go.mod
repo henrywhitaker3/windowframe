@@ -23,7 +23,7 @@ require (
 	github.com/hibiken/asynq v0.25.1
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/labstack/echo-contrib v0.17.4
-	github.com/labstack/echo/v4 v4.13.4
+	github.com/labstack/echo/v4 v4.15.0
 	github.com/nats-io/nats.go v1.47.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
@@ -42,7 +42,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/nats v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.40.0
 	github.com/thanos-io/objstore v0.0.0-20250813080715-4e5fd4289b50
-	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.63.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.65.0
 	go.opentelemetry.io/otel v1.40.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.40.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.40.0
@@ -170,7 +170,7 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/time v0.12.0 // indirect
+	golang.org/x/time v0.14.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260128011058-8636f8732409 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260128011058-8636f8732409 // indirect
