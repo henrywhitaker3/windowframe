@@ -3,7 +3,7 @@ module github.com/henrywhitaker3/windowframe
 go 1.25.0
 
 require (
-	github.com/XSAM/otelsql v0.40.0
+	github.com/XSAM/otelsql v0.41.0
 	github.com/brianvoe/gofakeit/v7 v7.14.0
 	github.com/exaring/otelpgx v0.10.0
 	github.com/getsentry/sentry-go v0.42.0
