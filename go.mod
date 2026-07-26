@@ -32,7 +32,7 @@ require (
 	github.com/redis/go-redis/v9 v9.17.3
 	github.com/redis/rueidis v1.0.71
 	github.com/redis/rueidis/rueidisotel v1.0.71
-	github.com/sethvargo/go-envconfig v1.3.0
+	github.com/sethvargo/go-envconfig v1.4.3
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/swaggest/jsonschema-go v0.3.79
