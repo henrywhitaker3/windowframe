@@ -15,7 +15,7 @@ func Redis(t testing.TB) (int, context.CancelFunc) {
 	port, err := redis.MappedPort(context.Background(), "6379/tcp")
 	require.Nil(t, err)
 
-	return port.Int(), func() {
+	return int(port.Num()), func() {
 		_ = redis.Terminate(context.Background())
 	}
 }

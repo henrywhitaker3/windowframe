@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/moby/moby/api/types/network"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -67,7 +68,7 @@ func S3(t testing.TB) (S3Details, context.CancelFunc) {
 			},
 		},
 		WaitingFor: &wait.HTTPStrategy{
-			Port: "3903",
+			Port: network.MustParsePort("3903/tcp"),
 			Path: "/",
 			StatusCodeMatcher: func(status int) bool {
 				return status == 400
@@ -114,7 +115,7 @@ func S3(t testing.TB) (S3Details, context.CancelFunc) {
 	secretAccessKey := strings.Trim(strings.Split(spl[5], ":")[1], " ")
 
 	return S3Details{
-			Port:            port.Int(),
+			Port:            int(port.Num()),
 			Bucket:          bucket,
 			AccessKeyID:     accessKeyID,
 			SecretAccessKey: secretAccessKey,

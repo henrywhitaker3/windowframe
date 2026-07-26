@@ -25,6 +25,7 @@ require (
 	github.com/labstack/echo-contrib/v5 v5.0.1
 	github.com/labstack/echo-opentelemetry v0.0.3
 	github.com/labstack/echo/v5 v5.3.1
+	github.com/moby/moby/api v1.54.2
 	github.com/nats-io/nats.go v1.52.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.24.1
@@ -122,7 +123,6 @@ require (
 	github.com/minio/minio-go/v7 v7.0.95 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/go-archive v0.2.0 // indirect
-	github.com/moby/moby/api v1.54.2 // indirect
 	github.com/moby/moby/client v0.4.0 // indirect
 	github.com/moby/patternmatcher v0.6.1 // indirect
 	github.com/moby/sys/sequential v0.6.0 // indirect
