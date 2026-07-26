@@ -7,7 +7,7 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.14.0
 	github.com/exaring/otelpgx v0.10.0
 	github.com/getsentry/sentry-go v0.48.0
-	github.com/getsentry/sentry-go/echo v0.40.0
+	github.com/getsentry/sentry-go/echo v0.48.0
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/go-kit/log v0.2.1
 	github.com/go-playground/validator/v10 v10.30.3
@@ -112,6 +112,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
+	github.com/labstack/echo/v5 v5.0.3 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
