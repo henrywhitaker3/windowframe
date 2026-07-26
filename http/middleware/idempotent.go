@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/henrywhitaker3/windowframe/http/validation"
-	"github.com/henrywhitaker3/windowframe/tracing"
-	"github.com/henrywhitaker3/windowframe/uuid"
+	"github.com/henrywhitaker3/windowframe/v2/http/validation"
+	"github.com/henrywhitaker3/windowframe/v2/tracing"
+	"github.com/henrywhitaker3/windowframe/v2/uuid"
 	"github.com/labstack/echo/v5"
 )
 

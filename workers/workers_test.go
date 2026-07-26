@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrywhitaker3/windowframe/test"
-	"github.com/henrywhitaker3/windowframe/workers"
+	"github.com/henrywhitaker3/windowframe/v2/test"
+	"github.com/henrywhitaker3/windowframe/v2/workers"
 	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/require"
 )

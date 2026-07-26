@@ -3,8 +3,8 @@ package middleware
 import (
 	"log/slog"
 
-	"github.com/henrywhitaker3/windowframe/http/common"
-	"github.com/henrywhitaker3/windowframe/tracing"
+	"github.com/henrywhitaker3/windowframe/v2/http/common"
+	"github.com/henrywhitaker3/windowframe/v2/tracing"
 	"github.com/labstack/echo/v5"
 )
 

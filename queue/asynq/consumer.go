@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"runtime"
 
-	"github.com/henrywhitaker3/windowframe/queue"
+	"github.com/henrywhitaker3/windowframe/v2/queue"
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"

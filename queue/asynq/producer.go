@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/henrywhitaker3/windowframe/queue"
+	"github.com/henrywhitaker3/windowframe/v2/queue"
 	"github.com/hibiken/asynq"
 )
 

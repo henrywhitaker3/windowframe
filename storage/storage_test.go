@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrywhitaker3/windowframe/storage"
-	"github.com/henrywhitaker3/windowframe/test"
+	"github.com/henrywhitaker3/windowframe/v2/storage"
+	"github.com/henrywhitaker3/windowframe/v2/test"
 	"github.com/stretchr/testify/require"
 )
 

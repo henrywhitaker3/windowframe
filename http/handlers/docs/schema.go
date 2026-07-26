@@ -3,7 +3,7 @@ package docs
 import (
 	"net/http"
 
-	"github.com/henrywhitaker3/windowframe/http/common"
+	"github.com/henrywhitaker3/windowframe/v2/http/common"
 	"github.com/labstack/echo/v5"
 )
 

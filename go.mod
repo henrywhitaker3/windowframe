@@ -1,4 +1,4 @@
-module github.com/henrywhitaker3/windowframe
+module github.com/henrywhitaker3/windowframe/v2
 
 go 1.26.5
 

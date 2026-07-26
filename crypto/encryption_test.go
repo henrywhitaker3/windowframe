@@ -3,8 +3,8 @@ package crypto_test
 import (
 	"testing"
 
-	"github.com/henrywhitaker3/windowframe/crypto"
-	"github.com/henrywhitaker3/windowframe/test"
+	"github.com/henrywhitaker3/windowframe/v2/crypto"
+	"github.com/henrywhitaker3/windowframe/v2/test"
 	"github.com/stretchr/testify/require"
 )
 

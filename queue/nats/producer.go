@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/henrywhitaker3/windowframe/queue"
-	"github.com/henrywhitaker3/windowframe/uuid"
+	"github.com/henrywhitaker3/windowframe/v2/queue"
+	"github.com/henrywhitaker3/windowframe/v2/uuid"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 )

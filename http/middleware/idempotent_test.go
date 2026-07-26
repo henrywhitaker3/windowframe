@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/henrywhitaker3/windowframe/http/middleware"
-	"github.com/henrywhitaker3/windowframe/test"
-	"github.com/henrywhitaker3/windowframe/uuid"
+	"github.com/henrywhitaker3/windowframe/v2/http/middleware"
+	"github.com/henrywhitaker3/windowframe/v2/test"
+	"github.com/henrywhitaker3/windowframe/v2/uuid"
 	"github.com/labstack/echo/v5"
 	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/require"

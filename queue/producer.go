@@ -3,7 +3,7 @@ package queue
 import (
 	"context"
 
-	"github.com/henrywhitaker3/windowframe/tracing"
+	"github.com/henrywhitaker3/windowframe/v2/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/henrywhitaker3/windowframe/uuid"
+	"github.com/henrywhitaker3/windowframe/v2/uuid"
 	"github.com/redis/rueidis"
 )
 

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/henrywhitaker3/flow"
-	"github.com/henrywhitaker3/windowframe/tracing"
+	"github.com/henrywhitaker3/windowframe/v2/tracing"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"

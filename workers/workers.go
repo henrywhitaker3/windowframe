@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron/v2"
-	"github.com/henrywhitaker3/windowframe/log"
+	"github.com/henrywhitaker3/windowframe/v2/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/rueidis"
 )

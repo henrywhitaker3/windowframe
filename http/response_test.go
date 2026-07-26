@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/henrywhitaker3/windowframe/http/common"
-	"github.com/henrywhitaker3/windowframe/test"
+	"github.com/henrywhitaker3/windowframe/v2/http/common"
+	"github.com/henrywhitaker3/windowframe/v2/test"
 	"github.com/labstack/echo-contrib/v5/echoprometheus"
 	"github.com/labstack/echo/v5"
 	"github.com/prometheus/client_golang/prometheus"
