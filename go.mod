@@ -23,7 +23,7 @@ require (
 	github.com/hibiken/asynq v0.25.1
 	github.com/jackc/pgx/v5 v5.9.1
 	github.com/labstack/echo-contrib v0.17.4
-	github.com/labstack/echo/v4 v4.15.0
+	github.com/labstack/echo/v4 v4.15.1
 	github.com/nats-io/nats.go v1.47.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.24.1
