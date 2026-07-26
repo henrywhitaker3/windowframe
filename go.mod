@@ -1,6 +1,6 @@
 module github.com/henrywhitaker3/windowframe
 
-go 1.25.0
+go 1.26.5
 
 require (
 	github.com/XSAM/otelsql v0.41.0
