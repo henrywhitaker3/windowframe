@@ -1,9 +1,9 @@
 // Package common
 package common
 
-import "github.com/labstack/echo/v4"
+import "github.com/labstack/echo/v5"
 
-type Handler[Req any, Resp any] func(c echo.Context, req Req) (*Resp, error)
+type Handler[Req any, Resp any] func(c *echo.Context, req Req) (*Resp, error)
 
 type ResponseKind struct {
 	kind string

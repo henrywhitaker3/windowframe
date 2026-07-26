@@ -1,4 +1,4 @@
-// Package httphttp
+// Package http
 package http
 
 import (
@@ -20,7 +20,7 @@ import (
 	"github.com/henrywhitaker3/windowframe/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/swaggest/jsonschema-go"
 	"github.com/swaggest/openapi-go"
 	"github.com/swaggest/openapi-go/openapi3"
@@ -61,6 +61,9 @@ type HTTP struct {
 	port           int
 	openapiEnabled bool
 
+	cancel context.CancelFunc
+	done   chan struct{}
+
 	handleErrors []ErrorHandler
 
 	Validator *validation.Validator
@@ -68,8 +71,6 @@ type HTTP struct {
 
 func New(opts HTTPOpts) *HTTP {
 	e := echo.New()
-	e.HideBanner = true
-	e.HidePort = true
 
 	r := openapi3.Reflector{}
 	r.Spec = &openapi3.Spec{Openapi: "3.0.3"}
@@ -114,8 +115,19 @@ func (h *HTTP) Start(ctx context.Context) error {
 		}
 		Register(h, docs.NewSchema(string(schema)))
 	}
+
+	runCtx, cancel := context.WithCancel(ctx)
+	h.cancel = cancel
+	h.done = make(chan struct{})
+	defer close(h.done)
+
 	h.logger.Info("starting http server", "port", h.port)
-	if err := h.e.Start(fmt.Sprintf(":%d", h.port)); err != nil {
+	sc := echo.StartConfig{
+		Address:    fmt.Sprintf(":%d", h.port),
+		HideBanner: true,
+		HidePort:   true,
+	}
+	if err := sc.Start(runCtx, h.e); err != nil {
 		if !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
@@ -125,15 +137,24 @@ func (h *HTTP) Start(ctx context.Context) error {
 
 func (h *HTTP) Stop(ctx context.Context) error {
 	h.logger.Info("stopping http server")
-	return h.e.Shutdown(ctx)
+	if h.cancel == nil {
+		return nil
+	}
+	h.cancel()
+	select {
+	case <-h.done:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	return nil
 }
 
 func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.e.ServeHTTP(w, r)
 }
 
-func (h *HTTP) Routes() []*echo.Route {
-	return h.e.Routes()
+func (h *HTTP) Routes() echo.Routes {
+	return h.e.Router().Routes()
 }
 
 func (h *HTTP) HandleErrors(funcs ...ErrorHandler) {
@@ -151,7 +172,7 @@ type Handler[Req any, Resp any] interface {
 }
 
 func Register[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) {
-	var reg func(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
+	var reg func(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) echo.RouteInfo
 
 	switch handler.Metadata().Method {
 	case http.MethodGet:
@@ -177,7 +198,7 @@ func Register[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) {
 		// Add a empty middleware so []... doesn't add a nil item
 		mw = []echo.MiddlewareFunc{
 			func(next echo.HandlerFunc) echo.HandlerFunc {
-				return func(c echo.Context) error {
+				return func(c *echo.Context) error {
 					return next(c)
 				}
 			},
@@ -198,7 +219,7 @@ func wrapHandler[Req any, Resp any](
 	logger log.Logger,
 ) echo.HandlerFunc {
 	handler := h.Handler()
-	return func(c echo.Context) error {
+	return func(c *echo.Context) error {
 		_, span := tracing.NewSpan(c.Request().Context(), "BindRequest")
 		defer span.End()
 
@@ -300,8 +321,13 @@ func replaceParams(path string) string {
 	return path
 }
 
-func (h *HTTP) handleError(err error, c echo.Context) {
-	if err == nil || c.Response().Committed {
+var defaultHTTPErrorHandler = echo.DefaultHTTPErrorHandler(false)
+
+func (h *HTTP) handleError(c *echo.Context, err error) {
+	if err == nil {
+		return
+	}
+	if resp, uerr := echo.UnwrapResponse(c.Response()); uerr == nil && resp.Committed {
 		return
 	}
 
@@ -311,7 +337,7 @@ func (h *HTTP) handleError(err error, c echo.Context) {
 			hub.CaptureException(err)
 		}
 	}
-	h.e.DefaultHTTPErrorHandler(err, c)
+	defaultHTTPErrorHandler(c, err)
 }
 
 func (h *HTTP) getErrorCodeAndResponse(err error) (int, any, bool) {

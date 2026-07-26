@@ -11,7 +11,7 @@ import (
 	"github.com/henrywhitaker3/windowframe/http/validation"
 	"github.com/henrywhitaker3/windowframe/tracing"
 	"github.com/henrywhitaker3/windowframe/uuid"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 type IdempotencyStore interface {
@@ -68,7 +68,7 @@ func Idempotent(opts IdempotentOpts) echo.MiddlewareFunc {
 	opts = setIdempotentOptsDefaults(opts)
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(c *echo.Context) error {
 			ctx, span := tracing.NewSpan(c.Request().Context(), "IdempotentMiddleware")
 			defer span.End()
 
@@ -116,18 +116,26 @@ func Idempotent(opts IdempotentOpts) echo.MiddlewareFunc {
 					}
 				}
 
-				if _, err := c.Response().Writer.Write(recorded.Body); err != nil {
+				echoResp, err := echo.UnwrapResponse(c.Response())
+				if err != nil {
+					return fmt.Errorf("unwrap response: %w", err)
+				}
+				if _, err := echoResp.ResponseWriter.Write(recorded.Body); err != nil {
 					return fmt.Errorf("write cached body to response: %w", err)
 				}
-				c.Response().Writer.WriteHeader(recorded.Code)
+				echoResp.ResponseWriter.WriteHeader(recorded.Code)
 				return nil
 			}
 
+			echoResp, err := echo.UnwrapResponse(c.Response())
+			if err != nil {
+				return fmt.Errorf("unwrap response: %w", err)
+			}
 			recorder := &responseRecorder{
-				writer:  c.Response().Writer,
+				writer:  echoResp.ResponseWriter,
 				Headers: http.Header{},
 			}
-			c.Response().Writer = recorder
+			echoResp.ResponseWriter = recorder
 
 			// There's nothing in the cache for this key
 			if err := next(c); err != nil {

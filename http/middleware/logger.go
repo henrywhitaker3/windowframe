@@ -8,20 +8,23 @@ import (
 	"time"
 
 	"github.com/henrywhitaker3/windowframe/tracing"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 type LogAttributesFunc = func(context.Context, *slog.Logger) *slog.Logger
 
 func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(c *echo.Context) error {
 			start := time.Now()
 			err := next(c)
-			c.Error(err)
+			if err != nil {
+				c.Echo().HTTPErrorHandler(c, err)
+			}
 			ctx, span := tracing.NewSpan(c.Request().Context(), "LogRequest")
 			defer span.End()
 			dur := time.Since(start)
+			status, size := responseStatusAndSize(c)
 			logger := slog.
 				With(
 					"remote_ip", c.RealIP(),
@@ -29,11 +32,11 @@ func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 					"uri", c.Request().RequestURI,
 					"method", c.Request().Method,
 					"user_agent", c.Request().UserAgent(),
-					"status", c.Response().Status,
+					"status", status,
 					"latency", dur.Nanoseconds(),
 					"latency_human", dur.String(),
 					"bytes_in", bytesIn(c),
-					"bytes_out", bytesOut(c),
+					"bytes_out", strconv.FormatInt(size, 10),
 				)
 			if traceID := tracing.TraceID(ctx); traceID != "" {
 				logger = logger.With("trace_id", traceID)
@@ -44,7 +47,7 @@ func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 			}
 
 			if err != nil {
-				if c.Response().Status >= 500 {
+				if status >= 500 {
 					logger = logger.With("error", err.Error())
 				}
 			}
@@ -54,7 +57,7 @@ func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 	}
 }
 
-func bytesIn(c echo.Context) string {
+func bytesIn(c *echo.Context) string {
 	cl := c.Request().Header.Get(echo.HeaderContentLength)
 	if cl == "" {
 		cl = "0"
@@ -62,6 +65,10 @@ func bytesIn(c echo.Context) string {
 	return cl
 }
 
-func bytesOut(c echo.Context) string {
-	return strconv.FormatInt(c.Response().Size, 10)
+func responseStatusAndSize(c *echo.Context) (int, int64) {
+	resp, err := echo.UnwrapResponse(c.Response())
+	if err != nil {
+		return 0, 0
+	}
+	return resp.Status, resp.Size
 }

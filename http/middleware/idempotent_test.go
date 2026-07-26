@@ -12,7 +12,7 @@ import (
 	"github.com/henrywhitaker3/windowframe/http/middleware"
 	"github.com/henrywhitaker3/windowframe/test"
 	"github.com/henrywhitaker3/windowframe/uuid"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/redis/rueidis"
 	"github.com/stretchr/testify/require"
 )
@@ -115,7 +115,7 @@ func setup(
 	opts.Store = store
 
 	e := echo.New()
-	e.GET("/", func(c echo.Context) error {
+	e.GET("/", func(c *echo.Context) error {
 		hits.Add(1)
 		c.Response().Header().Set("random-id", uuid.MustNew().String())
 		return c.String(http.StatusOK, "hello")

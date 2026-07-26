@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/henrywhitaker3/windowframe/http/common"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 type SchemaHandler struct {
@@ -18,7 +18,7 @@ func NewSchema(schema string) *SchemaHandler {
 }
 
 func (s *SchemaHandler) Handler() common.Handler[any, string] {
-	return func(c echo.Context, req any) (*string, error) {
+	return func(c *echo.Context, req any) (*string, error) {
 		c.Response().Header().Set(echo.HeaderContentType, "text/yaml")
 		return &s.schema, nil
 	}

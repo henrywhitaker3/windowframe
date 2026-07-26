@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/henrywhitaker3/ctxgen"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 )
 
 var (
@@ -20,7 +20,7 @@ var (
 	UserRefreshToken = "user-refresh"
 )
 
-func RequestID(c echo.Context) string {
+func RequestID(c *echo.Context) string {
 	return c.Response().Header().Get(echo.HeaderXRequestID)
 }
 
@@ -70,7 +70,7 @@ func GetRefreshToken(req *http.Request) (string, error) {
 	return cookie.Value, nil
 }
 
-func SetUserAuthCookie(c echo.Context, domain string, token string) {
+func SetUserAuthCookie(c *echo.Context, domain string, token string) {
 	url, err := url.Parse(domain)
 	if err == nil && url.Hostname() != "" {
 		domain = url.Hostname()
@@ -87,7 +87,7 @@ func SetUserAuthCookie(c echo.Context, domain string, token string) {
 	})
 }
 
-func SetUserRefreshTokenCookie(c echo.Context, domain string, token string) {
+func SetUserRefreshTokenCookie(c *echo.Context, domain string, token string) {
 	url, err := url.Parse(domain)
 	if err == nil && url.Hostname() != "" {
 		domain = url.Hostname()
