@@ -10,8 +10,8 @@ import (
 
 	"github.com/henrywhitaker3/windowframe/http/common"
 	"github.com/henrywhitaker3/windowframe/test"
-	"github.com/labstack/echo-contrib/echoprometheus"
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo-contrib/v5/echoprometheus"
+	"github.com/labstack/echo/v5"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
@@ -87,7 +87,7 @@ type dummyRequest struct {
 }
 
 func (d *dummyHandler) Handler() common.Handler[dummyRequest, any] {
-	return func(c echo.Context, req dummyRequest) (*any, error) {
+	return func(c *echo.Context, req dummyRequest) (*any, error) {
 		if d.err == nil {
 			return nil, nil
 		}

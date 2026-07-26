@@ -7,7 +7,7 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.14.0
 	github.com/exaring/otelpgx v0.10.0
 	github.com/getsentry/sentry-go v0.48.0
-	github.com/getsentry/sentry-go/echo v0.40.0
+	github.com/getsentry/sentry-go/echo v0.48.0
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/go-kit/log v0.2.1
 	github.com/go-playground/validator/v10 v10.30.3
@@ -22,8 +22,9 @@ require (
 	github.com/henrywhitaker3/rueidisleader v1.0.7
 	github.com/hibiken/asynq v0.26.0
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/labstack/echo-contrib v0.17.4
-	github.com/labstack/echo/v4 v4.15.4
+	github.com/labstack/echo-contrib/v5 v5.0.1
+	github.com/labstack/echo-opentelemetry v0.0.3
+	github.com/labstack/echo/v5 v5.3.1
 	github.com/nats-io/nats.go v1.52.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.24.1
@@ -42,7 +43,6 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/nats v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.40.0
 	github.com/thanos-io/objstore v0.0.0-20260615134008-fb6fd3a5170a
-	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.65.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
@@ -112,14 +112,11 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.11 // indirect
-	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mailru/easyjson v0.7.6 // indirect
-	github.com/mattn/go-colorable v0.1.15 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mdelapenya/tlscert v0.2.0 // indirect
 	github.com/minio/crc64nvme v1.0.2 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
@@ -155,8 +152,6 @@ require (
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect

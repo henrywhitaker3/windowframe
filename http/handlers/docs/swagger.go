@@ -3,7 +3,7 @@ package docs
 import (
 	"fmt"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
@@ -18,11 +18,11 @@ func NewSwagger(url string) *SwaggerHandler {
 }
 
 func (s *SwaggerHandler) Handler() echo.HandlerFunc {
-	return func(c echo.Context) error {
+	return func(c *echo.Context) error {
 		httpSwagger.Handler(
 			httpSwagger.URL(fmt.Sprintf("%s/docs/schema.yaml", s.url)),
 		)(
-			c.Response().Writer,
+			c.Response(),
 			c.Request(),
 		)
 		return nil

@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/labstack/echo/v4"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	echootel "github.com/labstack/echo-opentelemetry"
+	"github.com/labstack/echo/v5"
 )
 
 var (
@@ -13,9 +13,12 @@ var (
 )
 
 func Tracing(serviceName string) echo.MiddlewareFunc {
-	return otelecho.Middleware(
-		serviceName,
-		otelecho.WithSkipper(func(c echo.Context) bool {
+	mw, err := echootel.Config{
+		// serviceName is not a host:port address, but echootel only exposes
+		// ServerName as an identifying label, and uses it verbatim as the
+		// server.address span/metric attribute when it doesn't parse as one.
+		ServerName: serviceName,
+		Skipper: func(c *echo.Context) bool {
 			if c.Request().Method == http.MethodOptions {
 				return true
 			}
@@ -23,6 +26,10 @@ func Tracing(serviceName string) echo.MiddlewareFunc {
 				return true
 			}
 			return false
-		}),
-	)
+		},
+	}.ToMiddleware()
+	if err != nil {
+		panic(err)
+	}
+	return mw
 }
