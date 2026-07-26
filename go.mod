@@ -36,7 +36,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/swaggest/jsonschema-go v0.3.79
-	github.com/swaggest/openapi-go v0.2.60
+	github.com/swaggest/openapi-go v0.2.61
 	github.com/swaggo/http-swagger/v2 v2.0.2
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/nats v0.40.0
