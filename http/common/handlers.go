@@ -30,4 +30,5 @@ type Metadata struct {
 	GenerateSpec bool
 	Kind         ResponseKind
 	Auth         Auth
+	Extras       map[string]any
 }
