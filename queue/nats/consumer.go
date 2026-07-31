@@ -14,6 +14,17 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
+// Values stored against a message id in the processed-log KV store.
+const (
+	// The id has been claimed for processing but not yet confirmed complete -
+	// this could mean it's genuinely in flight, or that the attempt which
+	// claimed it crashed/never finished.
+	kvStateProcessing = "processing"
+	// The id was successfully processed and acked. Safe to permanently
+	// terminate redelivery.
+	kvStateProcessed = "processed"
+)
+
 type ConsumerOpts struct {
 	URL           string
 	StreamName    string
@@ -191,9 +202,21 @@ func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out cha
 		// claimed (in flight or completed), which closes the race where a
 		// redelivered message could pass a plain existence check before the
 		// original delivery has finished processing and acked.
-		if _, err := c.kv.Create(ctx, id, []byte("processing")); err != nil {
+		if _, err := c.kv.Create(ctx, id, []byte(kvStateProcessing)); err != nil {
 			if errors.Is(err, jetstream.ErrKeyExists) {
-				_ = msg.TermWithReason("message already processed")
+				// The id is already claimed, but that alone doesn't tell us
+				// whether it finished successfully, is still being worked on,
+				// or was orphaned by a crash. Only Term - which permanently
+				// stops redelivery - once we can confirm via the KV value
+				// that it actually completed. Otherwise nak so the job isn't
+				// lost forever if the original attempt later fails or never
+				// finishes.
+				entry, getErr := c.kv.Get(ctx, id)
+				if getErr == nil && string(entry.Value()) == kvStateProcessed {
+					_ = msg.TermWithReason("message already processed")
+					return
+				}
+				_ = msg.Nak()
 				return
 			}
 			// Unable to verify the claim - nak and let it be retried rather

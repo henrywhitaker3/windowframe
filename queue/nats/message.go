@@ -2,6 +2,7 @@ package nats
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/henrywhitaker3/windowframe/v2/queue"
 	"github.com/henrywhitaker3/windowframe/v2/tracing"
@@ -29,10 +30,17 @@ func (m *message) Job() queue.Job {
 	return m.job
 }
 
-// Ack acknowledges the message. The processed-log claim was already written
-// atomically by the consumer before this message was handed off, so there is
-// nothing left to record here.
+// Ack marks the processed-log claim as complete, then acknowledges the
+// message. Marking completion is what lets the consumer safely Term a
+// redelivery of this id later instead of merely nak-ing it.
 func (m *message) Ack(ctx context.Context) error {
+	if m.kv != nil {
+		ctx, span := tracing.NewSpan(ctx, "MarkProcessedLog")
+		defer span.End()
+		if _, err := m.kv.Put(ctx, m.id, []byte(kvStateProcessed)); err != nil {
+			return fmt.Errorf("mark processed: %w", err)
+		}
+	}
 	return m.msg.DoubleAck(ctx)
 }
 
