@@ -96,3 +96,5 @@ func (w *Consumer) Consume(ctx context.Context, out chan<- queue.Message) error 
 	}()
 	return <-startErr
 }
+
+var _ queue.QueueConsumer = &Consumer{}

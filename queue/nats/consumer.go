@@ -4,6 +4,7 @@ package nats
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,6 +12,17 @@ import (
 	"github.com/henrywhitaker3/windowframe/v2/tracing"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+)
+
+// Values stored against a message id in the processed-log KV store.
+const (
+	// The id has been claimed for processing but not yet confirmed complete -
+	// this could mean it's genuinely in flight, or that the attempt which
+	// claimed it crashed/never finished.
+	kvStateProcessing = "processing"
+	// The id was successfully processed and acked. Safe to permanently
+	// terminate redelivery.
+	kvStateProcessed = "processed"
 )
 
 type ConsumerOpts struct {
@@ -23,6 +35,10 @@ type ConsumerOpts struct {
 	Backoff []time.Duration
 	// Defaults to 25
 	MaxDelivery int
+	// How long the server waits for an ack before redelivering a message.
+	// Should comfortably exceed HeartbeatInterval on the consumer so a
+	// slow-but-alive handler isn't redelivered mid-processing (default: 1m)
+	AckWait time.Duration
 
 	// The number of messages to fetch at a time (default: 100)
 	BatchSize int
@@ -51,6 +67,9 @@ func (c ConsumerOpts) withDefaults() ConsumerOpts {
 	}
 	if c.MaxDelivery == 0 {
 		c.MaxDelivery = 25
+	}
+	if c.AckWait == 0 {
+		c.AckWait = time.Minute
 	}
 	if c.BatchSize == 0 {
 		c.BatchSize = 100
@@ -122,6 +141,7 @@ func (c *Consumer) Consume(
 		Name:       c.opts.StreamName,
 		MaxDeliver: c.opts.MaxDelivery,
 		BackOff:    c.opts.Backoff,
+		AckWait:    c.opts.AckWait,
 	})
 	if err != nil {
 		return fmt.Errorf("create or update consumer: %w", err)
@@ -162,17 +182,10 @@ func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out cha
 		return
 	}
 
-	if *c.opts.ProcessLogEnabled {
-		ctx, span := tracing.NewSpan(ctx, "CheckProcessedLog")
-		defer span.End()
-		// If the key exists, then the message has already been processed
-		if _, err := c.kv.Get(ctx, id); err == nil {
-			_ = msg.TermWithReason("message already processed")
-			return
-		}
-		span.End()
-	}
-
+	// Delayed messages get nak'd-with-delay and redelivered once due, so this
+	// must happen before the processed-log claim below - otherwise the first
+	// (premature) delivery would permanently claim the id and the message
+	// would be dropped as "already processed" once it actually comes due.
 	if untilRaw := msg.Headers().Get(DelayedHeader); untilRaw != "" {
 		t, _ := time.Parse(time.RFC3339, untilRaw)
 		until := time.Until(t)
@@ -181,12 +194,44 @@ func (c *Consumer) handleMessage(ctx context.Context, msg jetstream.Msg, out cha
 			return
 		}
 	}
+
+	if *c.opts.ProcessLogEnabled {
+		ctx, span := tracing.NewSpan(ctx, "ClaimProcessedLog")
+		defer span.End()
+		// Atomically claim the message id. This fails if the id is already
+		// claimed (in flight or completed), which closes the race where a
+		// redelivered message could pass a plain existence check before the
+		// original delivery has finished processing and acked.
+		if _, err := c.kv.Create(ctx, id, []byte(kvStateProcessing)); err != nil {
+			if errors.Is(err, jetstream.ErrKeyExists) {
+				// The id is already claimed, but that alone doesn't tell us
+				// whether it finished successfully, is still being worked on,
+				// or was orphaned by a crash. Only Term - which permanently
+				// stops redelivery - once we can confirm via the KV value
+				// that it actually completed. Otherwise nak so the job isn't
+				// lost forever if the original attempt later fails or never
+				// finishes.
+				entry, getErr := c.kv.Get(ctx, id)
+				if getErr == nil && string(entry.Value()) == kvStateProcessed {
+					_ = msg.TermWithReason("message already processed")
+					return
+				}
+				_ = msg.Nak()
+				return
+			}
+			// Unable to verify the claim - nak and let it be retried rather
+			// than risk processing a message we couldn't dedupe.
+			_ = msg.Nak()
+			return
+		}
+		span.End()
+	}
 	var job queue.Job
 	if err := json.Unmarshal(msg.Data(), &job); err != nil {
 		_ = msg.Nak()
 		return
 	}
-	out <- newMessage(job, msg, c.kv)
+	out <- newMessage(job, msg, c.kv, id)
 }
 
 func (c *Consumer) Close(ctx context.Context) error {
