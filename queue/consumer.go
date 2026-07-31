@@ -28,6 +28,14 @@ type Message interface {
 	Deadletter(context.Context) error
 }
 
+// ProgressReporter is optionally implemented by a Message when its driver
+// needs to be told that a long-running job is still being worked on, to stop
+// it being redelivered and processed a second time while the first attempt
+// is still in flight.
+type ProgressReporter interface {
+	InProgress(context.Context) error
+}
+
 type QueueConsumer interface {
 	Consume(context.Context, chan<- Message) error
 	Close(ctx context.Context) error
@@ -54,6 +62,9 @@ type ConsumerOpts struct {
 	AckAttempts int
 	// The time between each each attempt (default: 5ms)
 	AckBackoff time.Duration
+	// How often to tell the driver a long-running job is still in progress,
+	// for drivers whose Message implements ProgressReporter (default: 10s)
+	HeartbeatInterval time.Duration
 }
 
 func (c ConsumerOpts) withDefaults() ConsumerOpts {
@@ -65,6 +76,9 @@ func (c ConsumerOpts) withDefaults() ConsumerOpts {
 	}
 	if c.AckBackoff == 0 {
 		c.AckBackoff = time.Millisecond * 5
+	}
+	if c.HeartbeatInterval == 0 {
+		c.HeartbeatInterval = time.Second * 10
 	}
 	return c
 }
@@ -138,6 +152,12 @@ func (c *Consumer) handler(ctx context.Context, msg Message) error {
 		return msg.Deadletter(ctx)
 	}
 
+	if pr, ok := msg.(ProgressReporter); ok {
+		hbCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		go c.heartbeat(hbCtx, pr)
+	}
+
 	err := handler(ctx, msg.Job().Payload)
 	if err != nil {
 		c.obs.observeError(ctx, msg.Job(), start, err)
@@ -158,6 +178,21 @@ func (c *Consumer) handler(ctx context.Context, msg Message) error {
 	_, err = ack(ctx)
 
 	return err
+}
+
+// heartbeat periodically tells the driver a job is still being worked on,
+// until ctx is cancelled (the handler returned, one way or another).
+func (c *Consumer) heartbeat(ctx context.Context, pr ProgressReporter) {
+	ticker := time.NewTicker(c.opts.HeartbeatInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			_ = pr.InProgress(ctx)
+		}
+	}
 }
 
 func (c *Consumer) RegisterShutdown(f ShutdownFunc) {

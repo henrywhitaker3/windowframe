@@ -64,3 +64,5 @@ func asynqOptsFromQueueOpts(opts []queue.Option) []asynq.Option {
 	}
 	return out
 }
+
+var _ queue.QueueProducer = &Producer{}
