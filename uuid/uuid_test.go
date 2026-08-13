@@ -78,3 +78,22 @@ func TestItUnmarshalsFromYaml(t *testing.T) {
 	require.Nil(t, yaml.Unmarshal(fmt.Appendf(nil, "%s\n", plain), &id))
 	require.Equal(t, plain, id.String())
 }
+
+func TestItMarshalsText(t *testing.T) {
+	expected := "beefbeef-beef-beef-beef-beefbeefbeef"
+	id, err := Parse(expected)
+	require.Nil(t, err)
+
+	marshalled, err := id.MarshalText()
+	require.Nil(t, err)
+	require.Equal(t, expected, string(marshalled))
+}
+
+func TestItUnmarshalsText(t *testing.T) {
+	text := "beefbeef-beef-beef-beef-beefbeefbeef"
+	id, err := Parse(text)
+	require.Nil(t, err)
+
+	require.Nil(t, id.UnmarshalText([]byte(text)))
+	require.Equal(t, text, id.String())
+}

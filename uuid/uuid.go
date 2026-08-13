@@ -61,6 +61,14 @@ func (u *UUID) UnmarshalParam(s string) error {
 	return nil
 }
 
+func (u UUID) MarshalText() ([]byte, error) {
+	return []byte(u.String()), nil
+}
+
+func (u *UUID) UnmarshalText(data []byte) error {
+	return u.UnmarshalJSON(data)
+}
+
 func (u UUID) String() string {
 	return u.UUID().String()
 }
