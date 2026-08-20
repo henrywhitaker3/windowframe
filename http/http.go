@@ -113,7 +113,7 @@ func (h *HTTP) Start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("could not marshal openapi spec: %w", err)
 		}
-		Register(h, docs.NewSchema(string(schema)))
+		h.Register(docs.NewSchema(string(schema)))
 	}
 
 	runCtx, cancel := context.WithCancel(ctx)
@@ -171,7 +171,7 @@ type Handler[Req any, Resp any] interface {
 	Metadata() common.Metadata
 }
 
-func Register[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) {
+func (h *HTTP) Register[Req, Resp any](handler Handler[Req, Resp]) {
 	var reg func(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) echo.RouteInfo
 
 	switch handler.Metadata().Method {

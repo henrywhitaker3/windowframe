@@ -27,7 +27,7 @@ func TestItReturnsJSONErrorsFromHandlers(t *testing.T) {
 		return http.StatusForbidden, map[string]string{"message": "forbidden"}, true
 	})
 
-	Register(srv, &dummyHandler{
+	srv.Register(&dummyHandler{
 		err: fmt.Errorf("some error"),
 	})
 
@@ -59,7 +59,7 @@ func TestItReturnsValidationErrorsProperly(t *testing.T) {
 		Subsystem:  "test",
 	}))
 
-	Register(srv, &dummyHandler{})
+	srv.Register(&dummyHandler{})
 
 	rec := httptest.NewRecorder()
 	body, err := json.Marshal(dummyRequest{AField: "bongo"})
