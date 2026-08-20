@@ -15,7 +15,7 @@ handler := events.New(events.EventHandlerOptions{
     HandlerTimeout: 5 * time.Second,
 })
 
-events.Register(handler, func(ctx context.Context, e UserCreated) error {
+handler.Listen(func(ctx context.Context, e UserCreated) error {
     fmt.Println("user created:", e.ID)
     return nil
 })
@@ -23,7 +23,7 @@ events.Register(handler, func(ctx context.Context, e UserCreated) error {
 // Starts a pool of runtime.NumCPU() workers that process queued events.
 handler.Run(context.Background())
 
-if err := events.Event[UserCreated](handler, UserCreated{ID: "123"}); err != nil {
+if err := handler.Dispatch[UserCreated](UserCreated{ID: "123"}); err != nil {
     panic(err)
 }
 
@@ -35,7 +35,7 @@ You can register multiple listeners for the same event type, and they all run
 independently:
 
 ```go
-events.Register(handler, sendWelcomeEmail, provisionAccount)
+handler.Listen(sendWelcomeEmail, provisionAccount)
 ```
 
 ## Global handler
