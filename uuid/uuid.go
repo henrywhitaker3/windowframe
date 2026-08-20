@@ -4,8 +4,8 @@ package uuid
 import (
 	"encoding/json"
 	"time"
+	"uuid"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -74,8 +74,7 @@ func (u UUID) String() string {
 }
 
 func New() (UUID, error) {
-	id, err := uuid.NewRandom()
-	return UUID(id), err
+	return UUID(uuid.NewV4()), nil
 }
 
 func MustNew() UUID {
@@ -83,8 +82,7 @@ func MustNew() UUID {
 }
 
 func Ordered() (UUID, error) {
-	id, err := uuid.NewV7()
-	return UUID(id), err
+	return UUID(uuid.NewV7()), nil
 }
 
 func OrderedAt(at time.Time) (UUID, error) {
