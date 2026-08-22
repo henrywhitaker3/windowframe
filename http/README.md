@@ -21,7 +21,7 @@ type PingResponse struct {
 
 type Ping struct{}
 
-func (p *Ping) Handler() common.Handler[PingRequest, PingResponse] {
+func (p *Ping) Handler() handlers.Handler[PingRequest, PingResponse] {
     return func(c *echo.Context, req PingRequest) (*PingResponse, error) {
         return &PingResponse{Message: "hello " + req.Name}, nil
     }
@@ -31,8 +31,8 @@ func (p *Ping) Middleware() []echo.MiddlewareFunc {
     return []echo.MiddlewareFunc{}
 }
 
-func (p *Ping) Metadata() common.Metadata {
-    return common.Metadata{
+func (p *Ping) Metadata() handlers.Metadata {
+    return handlers.Metadata{
         Name:         "Ping",
         Description:  "Says hello",
         Tag:          "misc",
@@ -78,12 +78,12 @@ For every request, `Register` wraps the handler so that it:
 
 1. Binds the request into `Req` via echo's binder (path, query, header, body —
    whatever the struct tags ask for). A bind failure returns `400` with
-   `common.ErrBadRequest`.
+   `httperrors.ErrBadRequest`.
 2. Validates `Req` with the server's `*validation.Validator` (`validate` tags).
 3. Calls the handler.
 4. Writes the response: `nil` writes `Metadata().Code` with no content,
-   `common.KindString` writes it as plain text, and anything else (including the
-   zero value `common.KindJSON`) writes JSON.
+   `handlers.KindString` writes it as plain text, and anything else (including the
+   zero value `handlers.KindJSON`) writes JSON.
 
 Steps 2 and 3 both run before errors are considered: **the handler is invoked
 even when validation failed**, and its response is discarded in favour of the
@@ -98,12 +98,12 @@ JSON body:
 | Error | Status |
 | --- | --- |
 | `*echo.HTTPError` | its own code |
-| `pgx.ErrNoRows`, `sql.ErrNoRows`, `common.ErrNotFound` | `404` |
-| `common.ErrValidation`, `*validation.ValidationError` | `422` |
+| `pgx.ErrNoRows`, `sql.ErrNoRows`, `httperrors.ErrNotFound` | `404` |
+| `httperrors.ErrValidation`, `*validation.ValidationError` | `422` |
 | Postgres unique violation (`23505`) | `422` |
-| `common.ErrBadRequest` | `400` |
-| `common.ErrUnauth` | `401` |
-| `common.ErrForbidden` | `403` |
+| `httperrors.ErrBadRequest` | `400` |
+| `httperrors.ErrUnauth` | `401` |
+| `httperrors.ErrForbidden` | `403` |
 
 Anything unmatched falls through to echo's error handler as a `500`, is logged,
 and is reported to Sentry when a hub is on the context (via
@@ -166,7 +166,7 @@ Bearer schemes are declared in `OpenapiOpts.BearerAuth` and attached to
 operations through `Metadata().Auth`:
 
 ```go
-Auth: common.Auth{Enabled: true, Name: "bearer", Scopes: []string{"users:read"}},
+Auth: handlers.Auth{Enabled: true, Name: "bearer", Scopes: []string{"users:read"}},
 ```
 
 Note that this only documents the requirement — enforcing it is your
@@ -214,12 +214,17 @@ validation error. Supply any `IdempotencyStore` implementation to back it with
 something other than Redis — `Get` must return `ErrIdempotentMissing` on a miss
 and `Lock` must return `ErrIdempotentLocked` when the key is held.
 
-## common
+## common and handlers
 
-`http/common` holds the pieces handlers need without importing the server:
+`http/handlers` holds the types used to define a handler without importing the
+server:
 
 - `Handler[Req, Resp]`, `Metadata`, `Auth`, `KindJSON`/`KindString`.
-- The sentinel errors above, plus `Wrap`/`Stack` from `pkg/errors`.
+
+`http/httperrors` contains the sentinel errors above, plus `Wrap`/`Stack` from
+`pkg/errors`.
+
+`http/common` contains request helpers:
 - Request context helpers: `RequestID`, `SetContextID`/`ContextID`,
   `SetTraceID`/`TraceID`, `SetRequest`/`GetRequest`,
   `SetAuthMethod`/`GetAuthMethod`.

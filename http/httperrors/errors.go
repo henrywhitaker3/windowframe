@@ -1,4 +1,5 @@
-package common
+// Package httperrors contains HTTP-specific sentinel errors and error helpers.
+package httperrors
 
 import (
 	"fmt"

@@ -1,5 +1,5 @@
-// Package common
-package common
+// Package handlers contains the types used to define typed HTTP handlers.
+package handlers
 
 import "github.com/labstack/echo/v5"
 

@@ -12,8 +12,9 @@ import (
 
 	sentryecho "github.com/getsentry/sentry-go/echo"
 	"github.com/henrywhitaker3/windowframe/v2/duration"
-	"github.com/henrywhitaker3/windowframe/v2/http/common"
+	"github.com/henrywhitaker3/windowframe/v2/http/handlers"
 	"github.com/henrywhitaker3/windowframe/v2/http/handlers/docs"
+	"github.com/henrywhitaker3/windowframe/v2/http/httperrors"
 	"github.com/henrywhitaker3/windowframe/v2/http/validation"
 	"github.com/henrywhitaker3/windowframe/v2/log"
 	"github.com/henrywhitaker3/windowframe/v2/tracing"
@@ -166,9 +167,9 @@ func (h *HTTP) Use(mw echo.MiddlewareFunc) {
 }
 
 type Handler[Req any, Resp any] interface {
-	Handler() common.Handler[Req, Resp]
+	Handler() handlers.Handler[Req, Resp]
 	Middleware() []echo.MiddlewareFunc
-	Metadata() common.Metadata
+	Metadata() handlers.Metadata
 }
 
 func (h *HTTP) Register[Req, Resp any](handler Handler[Req, Resp]) {
@@ -226,7 +227,7 @@ func wrapHandler[Req any, Resp any](
 		var req Req
 		if err := c.Bind(&req); err != nil {
 			logger.Debug("failed to bind request", "error", err)
-			return common.ErrBadRequest
+			return httperrors.ErrBadRequest
 		}
 		span.End()
 
@@ -252,9 +253,9 @@ func wrapHandler[Req any, Resp any](
 		}
 
 		switch h.Metadata().Kind {
-		case common.KindString:
+		case handlers.KindString:
 			return c.String(h.Metadata().Code, fmt.Sprintf("%v", *resp))
-		case common.KindJSON:
+		case handlers.KindJSON:
 			fallthrough
 		default:
 			return c.JSON(h.Metadata().Code, *resp)
@@ -359,19 +360,19 @@ func (h *HTTP) getErrorCodeAndResponse(err error) (int, any, bool) {
 	case errors.Is(err, sql.ErrNoRows):
 		return http.StatusNotFound, NewError("not found"), true
 
-	case errors.Is(err, common.ErrValidation):
+	case errors.Is(err, httperrors.ErrValidation):
 		return http.StatusUnprocessableEntity, NewError(err.Error()), true
 
-	case errors.Is(err, common.ErrBadRequest):
+	case errors.Is(err, httperrors.ErrBadRequest):
 		return http.StatusBadRequest, NewError(err.Error()), true
 
-	case errors.Is(err, common.ErrUnauth):
+	case errors.Is(err, httperrors.ErrUnauth):
 		return http.StatusUnauthorized, NewError(err.Error()), true
 
-	case errors.Is(err, common.ErrForbidden):
+	case errors.Is(err, httperrors.ErrForbidden):
 		return http.StatusForbidden, NewError("fobidden"), true
 
-	case errors.Is(err, common.ErrNotFound):
+	case errors.Is(err, httperrors.ErrNotFound):
 		return http.StatusNotFound, NewError("not found"), true
 	}
 

@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/henrywhitaker3/windowframe/v2/http/common"
+	"github.com/henrywhitaker3/windowframe/v2/http/handlers"
 	"github.com/henrywhitaker3/windowframe/v2/test"
 	"github.com/labstack/echo-contrib/v5/echoprometheus"
 	"github.com/labstack/echo/v5"
@@ -86,7 +86,7 @@ type dummyRequest struct {
 	AField string `validate:"uppercase"`
 }
 
-func (d *dummyHandler) Handler() common.Handler[dummyRequest, any] {
+func (d *dummyHandler) Handler() handlers.Handler[dummyRequest, any] {
 	return func(c *echo.Context, req dummyRequest) (*any, error) {
 		if d.err == nil {
 			return nil, nil
@@ -99,8 +99,8 @@ func (d *dummyHandler) Middleware() []echo.MiddlewareFunc {
 	return []echo.MiddlewareFunc{}
 }
 
-func (d *dummyHandler) Metadata() common.Metadata {
-	return common.Metadata{
+func (d *dummyHandler) Metadata() handlers.Metadata {
+	return handlers.Metadata{
 		Path:   "/",
 		Method: http.MethodGet,
 		Code:   http.StatusOK,
