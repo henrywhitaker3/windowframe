@@ -1,6 +1,7 @@
 package uuid
 
 import (
+	"encoding/json"
 	"fmt"
 	"slices"
 	"testing"
@@ -96,4 +97,12 @@ func TestItUnmarshalsText(t *testing.T) {
 
 	require.Nil(t, id.UnmarshalText([]byte(text)))
 	require.Equal(t, text, id.String())
+}
+
+func TestItUnmarshalsJSON(t *testing.T) {
+	expected := "01991c2b-13f8-7e45-9b2c-ed1230826bc6"
+
+	var id UUID
+	require.NoError(t, json.Unmarshal([]byte(fmt.Sprintf("%q", expected)), &id))
+	require.Equal(t, expected, id.String())
 }

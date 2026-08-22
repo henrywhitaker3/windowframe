@@ -27,7 +27,11 @@ func (u UUID) MarshalJSON() ([]byte, error) {
 }
 
 func (u *UUID) UnmarshalJSON(data []byte) error {
-	id, err := Parse(string(data))
+	var raw string
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	id, err := Parse(raw)
 	if err != nil {
 		return err
 	}
@@ -66,7 +70,12 @@ func (u UUID) MarshalText() ([]byte, error) {
 }
 
 func (u *UUID) UnmarshalText(data []byte) error {
-	return u.UnmarshalJSON(data)
+	id, err := Parse(string(data))
+	if err != nil {
+		return err
+	}
+	*u = id
+	return nil
 }
 
 func (u UUID) String() string {
