@@ -3,7 +3,7 @@ package docs
 import (
 	"net/http"
 
-	"github.com/henrywhitaker3/windowframe/v2/http/common"
+	"github.com/henrywhitaker3/windowframe/v2/http/handlers"
 	"github.com/labstack/echo/v5"
 )
 
@@ -17,19 +17,19 @@ func NewSchema(schema string) *SchemaHandler {
 	}
 }
 
-func (s *SchemaHandler) Handler() common.Handler[any, string] {
+func (s *SchemaHandler) Handler() handlers.Handler[any, string] {
 	return func(c *echo.Context, req any) (*string, error) {
 		c.Response().Header().Set(echo.HeaderContentType, "text/yaml")
 		return &s.schema, nil
 	}
 }
 
-func (s *SchemaHandler) Metadata() common.Metadata {
-	return common.Metadata{
+func (s *SchemaHandler) Metadata() handlers.Metadata {
+	return handlers.Metadata{
 		Name:   "Openapi schema",
 		Method: http.MethodGet,
 		Path:   "/docs/schema.yaml",
-		Kind:   common.KindString,
+		Kind:   handlers.KindString,
 		Code:   http.StatusOK,
 	}
 }
