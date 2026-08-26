@@ -332,6 +332,17 @@ func (h *HTTP) handleError(c *echo.Context, err error) {
 		return
 	}
 
+	if code, response, handled := h.getErrorCodeAndResponse(err); handled {
+		if writeErr := c.JSON(code, response); writeErr != nil {
+			h.logger.ErrorContext(
+				c.Request().Context(),
+				"failed to write error response",
+				"error", writeErr,
+			)
+		}
+		return
+	}
+
 	if !isHTTPError(err) {
 		h.logger.ErrorContext(c.Request().Context(), "unhandled error", "error", err)
 		if hub := sentryecho.GetHubFromContext(c); hub != nil && err != nil {
@@ -342,8 +353,8 @@ func (h *HTTP) handleError(c *echo.Context, err error) {
 }
 
 func (h *HTTP) getErrorCodeAndResponse(err error) (int, any, bool) {
-	if isHTTPError(err) {
-		herr := err.(*echo.HTTPError)
+	var herr *echo.HTTPError
+	if errors.As(err, &herr) {
 		return herr.Code, herr, true
 	}
 
@@ -408,17 +419,12 @@ func (e ErrorJSON) Error() string {
 }
 
 func isHTTPError(err error) bool {
-	switch err.(type) {
-	case *echo.HTTPError:
-		return true
-	default:
-		return false
-	}
+	var statusCoder echo.HTTPStatusCoder
+	return errors.As(err, &statusCoder)
 }
 
 func asPgError(err error) (*pgconn.PgError, bool) {
-	var pg *pgconn.PgError
-	if errors.As(err, &pg) {
+	if pg, ok := errors.AsType[*pgconn.PgError](err); ok {
 		return pg, true
 	}
 	return nil, false
