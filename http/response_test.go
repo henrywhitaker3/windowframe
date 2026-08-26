@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/henrywhitaker3/windowframe/v2/http/handlers"
+	"github.com/henrywhitaker3/windowframe/v2/http/httperrors"
 	"github.com/henrywhitaker3/windowframe/v2/test"
 	"github.com/labstack/echo-contrib/v5/echoprometheus"
 	"github.com/labstack/echo/v5"
@@ -46,6 +47,23 @@ func TestItReturnsJSONErrorsFromHandlers(t *testing.T) {
 		buf.String(),
 		`test_request_total{code="500",host="example.com",method="GET",url="/"} 1`,
 	)
+}
+
+func TestItMapsErrorsReturnedByMiddleware(t *testing.T) {
+	srv := New(HTTPOpts{})
+	srv.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			return httperrors.ErrNotFound
+		}
+	})
+
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	var response ErrorJSON
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&response))
+	require.Equal(t, "not found", response.Message)
 }
 
 func TestItReturnsValidationErrorsProperly(t *testing.T) {
