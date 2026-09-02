@@ -2,6 +2,7 @@ package events_test
 
 import (
 	"context"
+	"errors"
 	"sync/atomic"
 	"testing"
 	"testing/synctest"
@@ -16,15 +17,26 @@ func TestDispatchUnregisteredEventReturnsError(t *testing.T) {
 
 	handler := events.New(events.EventHandlerOptions{HandlerTimeout: time.Second})
 
-	err := handler.Dispatch[unregistered](unregistered{})
+	err := handler.Dispatch(unregistered{})
 
+	require.ErrorIs(t, err, events.ErrUnregisteredEvent)
+}
+
+func TestDispatchChannelUnregisteredEventReturnsError(t *testing.T) {
+	type unregistered struct{}
+
+	handler := events.New(events.EventHandlerOptions{HandlerTimeout: time.Second})
+
+	results, err := handler.DispatchChannel(unregistered{})
+
+	require.Nil(t, results)
 	require.ErrorIs(t, err, events.ErrUnregisteredEvent)
 }
 
 func TestListenUnnamedTypeReturnsError(t *testing.T) {
 	handler := events.New(events.EventHandlerOptions{HandlerTimeout: time.Second})
 
-	err := handler.Listen[struct{ X int }](func(ctx context.Context, e struct{ X int }) error {
+	err := handler.Listen(func(ctx context.Context, e struct{ X int }) error {
 		return nil
 	})
 
@@ -47,7 +59,7 @@ func TestEventDispatchesToRegisteredListener(t *testing.T) {
 		defer cancel()
 		handler.Run(ctx)
 
-		require.NoError(t, handler.Dispatch[widgetCreated](widgetCreated{ID: "abc"}))
+		require.NoError(t, handler.Dispatch(widgetCreated{ID: "abc"}))
 
 		// Wait for the worker pool to become idle again, meaning the
 		// dispatched event has been fully processed.
@@ -59,6 +71,36 @@ func TestEventDispatchesToRegisteredListener(t *testing.T) {
 		default:
 			t.Fatal("listener was not invoked")
 		}
+
+		handler.Flush()
+	})
+}
+
+func TestDispatchChannelReturnsEveryListenerResultAndCloses(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		type widgetCreated struct{}
+		listenerErr := errors.New("listener failed")
+
+		handler := events.New(events.EventHandlerOptions{HandlerTimeout: time.Second})
+		require.NoError(t, handler.Listen(
+			func(context.Context, widgetCreated) error { return nil },
+			func(context.Context, widgetCreated) error { return listenerErr },
+		))
+
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		handler.Run(ctx)
+
+		results, err := handler.DispatchChannel(widgetCreated{})
+		require.NoError(t, err)
+
+		synctest.Wait()
+
+		var got []error
+		for result := range results {
+			got = append(got, result)
+		}
+		require.ElementsMatch(t, []error{nil, listenerErr}, got)
 
 		handler.Flush()
 	})
@@ -81,7 +123,7 @@ func TestMultipleListenersAllInvoked(t *testing.T) {
 		defer cancel()
 		handler.Run(ctx)
 
-		require.NoError(t, handler.Dispatch[pinged](pinged{}))
+		require.NoError(t, handler.Dispatch(pinged{}))
 		synctest.Wait()
 
 		require.Equal(t, int32(2), calls.Load())
@@ -111,10 +153,10 @@ func TestListenerPanicIsRecoveredAndPoolKeepsProcessing(t *testing.T) {
 
 		// This event panics the listener. The worker pool must recover and
 		// keep running rather than losing a worker.
-		require.NoError(t, handler.Dispatch[risky](risky{Boom: true}))
+		require.NoError(t, handler.Dispatch(risky{Boom: true}))
 		synctest.Wait()
 
-		require.NoError(t, handler.Dispatch[risky](risky{Boom: false}))
+		require.NoError(t, handler.Dispatch(risky{Boom: false}))
 		synctest.Wait()
 
 		select {
@@ -145,7 +187,7 @@ func TestHandlerTimeoutCancelsListenerContext(t *testing.T) {
 		defer cancel()
 		handler.Run(ctx)
 
-		require.NoError(t, handler.Dispatch[slow](slow{}))
+		require.NoError(t, handler.Dispatch(slow{}))
 
 		synctest.Sleep(timeout)
 
@@ -175,7 +217,7 @@ func TestFlushProcessesEventsQueuedBeforeRun(t *testing.T) {
 		// Dispatch events without ever calling Run: Flush should still drain
 		// and process everything sitting in the queue.
 		for i := range 5 {
-			require.NoError(t, handler.Dispatch[queued](queued{N: i}))
+			require.NoError(t, handler.Dispatch(queued{N: i}))
 		}
 
 		handler.Flush()
@@ -200,7 +242,7 @@ func TestResetAllowsHandlerToRunAgainAfterFlush(t *testing.T) {
 		defer cancel()
 
 		handler.Run(ctx)
-		require.NoError(t, handler.Dispatch[reopened](reopened{}))
+		require.NoError(t, handler.Dispatch(reopened{}))
 		synctest.Wait()
 		handler.Flush()
 
@@ -208,7 +250,7 @@ func TestResetAllowsHandlerToRunAgainAfterFlush(t *testing.T) {
 
 		handler.Reset()
 		handler.Run(ctx)
-		require.NoError(t, handler.Dispatch[reopened](reopened{}))
+		require.NoError(t, handler.Dispatch(reopened{}))
 		synctest.Wait()
 		handler.Flush()
 
@@ -241,6 +283,21 @@ func TestSetGlobalEnablesListenAndDispatch(t *testing.T) {
 			require.Equal(t, "hi", msg)
 		default:
 			t.Fatal("global listener was not invoked")
+		}
+
+		results, err := events.DispatchChannel(globalEvent{Msg: "bye"})
+		require.NoError(t, err)
+		synctest.Wait()
+
+		require.NoError(t, <-results)
+		_, open := <-results
+		require.False(t, open)
+
+		select {
+		case msg := <-received:
+			require.Equal(t, "bye", msg)
+		default:
+			t.Fatal("global listener was not invoked through DispatchChannel")
 		}
 
 		handler.Flush()

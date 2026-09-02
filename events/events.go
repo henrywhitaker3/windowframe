@@ -85,27 +85,66 @@ var (
 	ErrUnregisteredEvent = errors.New("unregistered event")
 )
 
-func (e *EventHandler) Dispatch[Event any](event any) error {
+func (e *EventHandler) Dispatch[Event any](event Event) error {
+	handlers, err := e.getHandlers[Event]()
+	if err != nil {
+		return fmt.Errorf("namespace event: %w", err)
+	}
+	return e.dispatch(handlers, event, nil)
+}
+
+func (e *EventHandler) DispatchChannel[Event any](event Event) (<-chan error, error) {
+	handlers, err := e.getHandlers[Event]()
+	if err != nil {
+		return nil, fmt.Errorf("namespace event: %w", err)
+	}
+	out := make(chan error, len(handlers))
+	return out, e.dispatch(handlers, event, out)
+}
+
+func (e *EventHandler) getHandlers[Event any]() ([]Listener[any], error) {
 	e.mu.RLock()
+	defer e.mu.RUnlock()
+
 	name, err := name[Event]()
 	if err != nil {
-		e.mu.RUnlock()
-		return fmt.Errorf("namespace event: %w", err)
+		return nil, fmt.Errorf("namespace event: %w", err)
 	}
 
 	handlers, ok := e.handlers[name]
 	if !ok {
-		e.mu.RUnlock()
-		return fmt.Errorf("%w: %s", ErrUnregisteredEvent, name)
+		return nil, fmt.Errorf("%w: %s", ErrUnregisteredEvent, name)
 	}
-	e.mu.RUnlock()
 
+	return handlers, nil
+}
+
+func (e *EventHandler) dispatch[Event any](
+	handlers []Listener[any],
+	event Event,
+	ch chan error,
+) error {
+	name, err := name[Event]()
+	if err != nil {
+		return fmt.Errorf("namespace event: %w", err)
+	}
 	e.slog.Debug("received event", "event", name)
+
+	var results *sync.WaitGroup
+	if ch != nil {
+		results = &sync.WaitGroup{}
+	}
 
 	for _, h := range handlers {
 		e.wg.Add(1)
+		if results != nil {
+			results.Add(1)
+		}
 		e.events <- func() {
 			defer e.wg.Done()
+			if results != nil {
+				defer results.Done()
+			}
 			defer func() {
 				if r := recover(); r != nil {
 					e.slog.Error("event listener panicked", "event", name, "panic", r)
@@ -115,10 +154,21 @@ func (e *EventHandler) Dispatch[Event any](event any) error {
 			e.slog.Debug("processing event", "event", name)
 			ctx, cancel := context.WithTimeout(context.Background(), e.opts.HandlerTimeout)
 			defer cancel()
-			if err := h(ctx, event); err != nil {
+			err := h(ctx, event)
+			if err != nil {
 				e.slog.ErrorContext(ctx, "event listener failed", "event", name, "error", err)
 			}
+			if ch != nil {
+				ch <- err
+			}
 		}
+	}
+
+	if results != nil {
+		go func() {
+			results.Wait()
+			close(ch)
+		}()
 	}
 
 	return nil
@@ -128,7 +178,14 @@ func Dispatch[Evt any](evt Evt) error {
 	if global == nil {
 		panic("cannot process event on nil global")
 	}
-	return global.Dispatch[Evt](evt)
+	return global.Dispatch(evt)
+}
+
+func DispatchChannel[Evt any](evt Evt) (<-chan error, error) {
+	if global == nil {
+		panic("cannot process event on nil global")
+	}
+	return global.DispatchChannel(evt)
 }
 
 func (e *EventHandler) Run(ctx context.Context) {

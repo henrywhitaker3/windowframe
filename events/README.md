@@ -23,12 +23,31 @@ handler.Listen(func(ctx context.Context, e UserCreated) error {
 // Starts a pool of runtime.NumCPU() workers that process queued events.
 handler.Run(context.Background())
 
-if err := handler.Dispatch[UserCreated](UserCreated{ID: "123"}); err != nil {
+if err := handler.Dispatch(UserCreated{ID: "123"}); err != nil {
     panic(err)
 }
 
 // Waits for every queued event to be processed and every worker to exit.
 handler.Flush()
+```
+
+### Receiving listener errors
+
+`DispatchChannel` returns a channel that receives one result from each
+listener, then closes once all listeners have finished. A `nil` result means
+that listener completed successfully.
+
+```go
+results, err := handler.DispatchChannel(UserCreated{ID: "123"})
+if err != nil {
+    panic(err)
+}
+
+for err := range results {
+    if err != nil {
+        fmt.Println("listener failed:", err)
+    }
+}
 ```
 
 You can register multiple listeners for the same event type, and they all run
@@ -58,15 +77,17 @@ if err := events.Dispatch(UserCreated{ID: "123"}); err != nil {
 }
 ```
 
-`Listen` and `Dispatch` both panic if called before `SetGlobal`.
+`Listen`, `Dispatch`, and `DispatchChannel` all panic if called before
+`SetGlobal`.
 
 ## Behaviour to be aware of
 
-- **Async**: `Event`/`Dispatch` only enqueue the work — they return before any
-  listener runs. Each event gets its own `context.Context` (independent of the
-  caller's), cancelled after `HandlerTimeout`.
-- **Errors are logged, not returned**: a listener's returned error is logged
-  via `slog` and does not propagate back to the `Event`/`Dispatch` caller.
+- **Async**: `Event`/`Dispatch`/`DispatchChannel` only enqueue the work — they
+  return before any listener runs. Each event gets its own `context.Context`
+  (independent of the caller's), cancelled after `HandlerTimeout`.
+- **Errors are logged, with an optional result channel**: a listener's returned
+  error is logged via `slog`. `DispatchChannel` also sends each listener's
+  returned error to its result channel.
 - **Panics are recovered**: a panicking listener is logged and does not take
   down the process or other listeners.
 - **Unregistered events error**: dispatching a type with no registered
