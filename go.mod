@@ -14,7 +14,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/grafana/otel-profiling-go v0.5.1
 	github.com/grafana/pyroscope-go v1.4.2
-	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.3
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.4
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/henrywhitaker3/ctxgen v1.0.1
 	github.com/henrywhitaker3/flow v1.11.1
