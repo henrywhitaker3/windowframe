@@ -430,8 +430,8 @@ github.com/testcontainers/testcontainers-go/modules/nats v0.44.0 h1:xGgxnCy6BnmI
 github.com/testcontainers/testcontainers-go/modules/nats v0.44.0/go.mod h1:UfIi/50Rj5pl3ixym03CO6kLQL5MIogZnGZj4OTJbh0=
 github.com/testcontainers/testcontainers-go/modules/redis v0.44.0 h1:43EH7N6yB5B2tY/9uhPit487tMLm5iQiyKQaXWXNbnk=
 github.com/testcontainers/testcontainers-go/modules/redis v0.44.0/go.mod h1:k4nnCSzm3z8yRMBKBn3rhsllbFjjhVn/2JjWNxxArg8=
-github.com/thanos-io/objstore v0.0.0-20260817070452-e42d91c337ee h1:wYM+gXWEVb2E3FpJniahNxf+/8goQsw8p05aPWyxJ5Q=
-github.com/thanos-io/objstore v0.0.0-20260817070452-e42d91c337ee/go.mod h1:pI5Ppb4ommu4PgplxxRUyEPMMu625BpJQCkCYbHk7Ac=
+github.com/thanos-io/objstore v0.0.0-20260828142402-4b0f36756cea h1:eM9FF1BnOxvSVgX2gxNmiQ1N1zB5EYVjkfHn/GxjzeE=
+github.com/thanos-io/objstore v0.0.0-20260828142402-4b0f36756cea/go.mod h1:e1F9Km2/SRGKl0NM1tb7b4R0Tv0Hx2OplkUeqrwo954=
 github.com/tinylib/msgp v1.3.0 h1:ULuf7GPooDaIlbyvgAxBV/FI7ynli6LZ1/nVUNu+0ww=
 github.com/tinylib/msgp v1.3.0/go.mod h1:ykjzy2wzgrlvpDCRc4LA8UXy6D8bzMSuAF3WD57Gok0=
 github.com/tklauser/go-sysconf v0.4.0 h1:7H0uAN+7RkwWRaxhYXDLqa5V3LPrJeV8wmD9dRUgPQU=
