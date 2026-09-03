@@ -8,6 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type stringAlias string
+
+type configWithStringAlias struct {
+	Value stringAlias `flag:"value"`
+}
+
 func TestItParsesPFlag(t *testing.T) {
 	set := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	set.String("some-field", "", "An example flag")
@@ -57,4 +63,15 @@ func TestItErrorsWhenPfldagsNotParsedYet(t *testing.T) {
 	e := NewPFlagExtractor[DummyConfig](set)
 	var conf DummyConfig
 	require.NotNil(t, e.Extract(&conf))
+}
+
+func TestItParsesNamedStringType(t *testing.T) {
+	set := pflag.NewFlagSet("test", pflag.ContinueOnError)
+	set.String("value", "", "A named string value")
+	require.NoError(t, set.Parse([]string{"--value", "bongo"}))
+
+	e := NewPFlagExtractor[configWithStringAlias](set)
+	var conf configWithStringAlias
+	require.NoError(t, e.Extract(&conf))
+	require.Equal(t, stringAlias("bongo"), conf.Value)
 }

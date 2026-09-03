@@ -63,7 +63,8 @@ func processItem[T any](
 		if err != nil {
 			return err
 		}
-		actual.FieldByName(field.Name).Set(reflect.ValueOf(value))
+		actualField := actual.FieldByName(field.Name)
+		actualField.Set(reflect.ValueOf(value).Convert(actualField.Type()))
 	}
 
 	return nil
