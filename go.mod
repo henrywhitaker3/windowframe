@@ -11,7 +11,7 @@ require (
 	github.com/go-co-op/gocron/v2 v2.22.0
 	github.com/go-kit/log v0.2.1
 	github.com/go-playground/validator/v10 v10.30.3
-	github.com/golang-migrate/migrate/v4 v4.19.1
+	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/grafana/otel-profiling-go v0.5.1
 	github.com/grafana/pyroscope-go v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.4
@@ -82,7 +82,6 @@ require (
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v28.5.1+incompatible // indirect
 	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
