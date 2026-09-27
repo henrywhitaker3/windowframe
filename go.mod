@@ -23,7 +23,7 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/labstack/echo-contrib/v5 v5.0.1
 	github.com/labstack/echo-opentelemetry v0.0.3
-	github.com/labstack/echo/v5 v5.3.1
+	github.com/labstack/echo/v5 v5.4.0
 	github.com/moby/moby/api v1.55.0
 	github.com/nats-io/nats.go v1.53.1
 	github.com/pkg/errors v0.9.1
