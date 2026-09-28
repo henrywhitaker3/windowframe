@@ -275,8 +275,8 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/labstack/echo-contrib/v5 v5.0.1 h1:Z23m8p1F9Doax+pa8ek8ll5d6wvzCbvrAn25ZWmSgrE=
 github.com/labstack/echo-contrib/v5 v5.0.1/go.mod h1:ajrqEwSloW0vQSTfJ4j9u4tHoS+dg4umCDPxuTvChZs=
-github.com/labstack/echo-opentelemetry v0.0.3 h1:r4HAlV3PniSlUmsqpXQ+YwFxo9RNuEOm2bGU9hAOhUY=
-github.com/labstack/echo-opentelemetry v0.0.3/go.mod h1:gGPMgJmQkDreqWyEzfPccPhaT8B3XLag2AByizhNoM4=
+github.com/labstack/echo-opentelemetry v0.0.4 h1:cPMPhwsoAc4AIrgZrqsA7jQ+1QaQfGDmAJTHSlUpyyQ=
+github.com/labstack/echo-opentelemetry v0.0.4/go.mod h1:L1ufh8N1ECxKsEbE4P9zjl3d2olnfOoZoaSfaK/ZUrw=
 github.com/labstack/echo/v5 v5.3.1 h1:75maCxkQVGualckLc/5s/ihgpH1a1Dc6AuGWNVNs6bw=
 github.com/labstack/echo/v5 v5.3.1/go.mod h1:4iEGNQiPPZnkfYpNR/L6fINd3NLiGWUD5+eBotFALas=
 github.com/leodido/go-urn v1.4.0 h1:WT9HwE9SGECu3lg4d/dIA+jxlljEa1/ffXKmRjqdmIQ=
