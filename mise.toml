@@ -5,5 +5,5 @@ gotestsum = "1.13.0"
 [tasks.test]
 description = "Run the test suite"
 run = """
-gotestsum --format testname
+gotestsum --packages './...' --format testname --rerun-fails
 """
