@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sethvargo/go-envconfig"
+	"github.com/sethvargo/go-envconfig/v2"
 )
 
 type EnvExtractor[T any] struct {
