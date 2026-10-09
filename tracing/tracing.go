@@ -34,14 +34,29 @@ func InitTracer(conf TracingOpts, version string) (*trace.TracerProvider, error)
 	var err error
 	if conf.Endpoint == "stdout" {
 		exporter, err = stdout.New(stdout.WithPrettyPrint())
-	} else {
+	} else if conf.Endpoint != "" {
 		exporter, err = otlptracehttp.New(
 			context.Background(),
 			otlptracehttp.WithEndpointURL(conf.Endpoint),
 		)
+	} else {
+		// Without explicit options, the exporter uses the standard OTEL_EXPORTER_OTLP_*
+		// environment variables (including OTEL_EXPORTER_OTLP[_TRACES]_ENDPOINT).
+		exporter, err = otlptracehttp.New(context.Background())
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	attrs := []attribute.KeyValue{}
+	if conf.ServiceName != "" {
+		attrs = append(attrs, semconv.ServiceName(conf.ServiceName))
+	}
+	if version != "" {
+		attrs = append(attrs, semconv.ServiceVersion(version))
+	}
+	if conf.Environment != "" {
+		attrs = append(attrs, attribute.String("environment", conf.Environment))
 	}
 
 	res, err := resource.New(
@@ -52,27 +67,20 @@ func InitTracer(conf TracingOpts, version string) (*trace.TracerProvider, error)
 		resource.WithProcess(),
 		resource.WithTelemetrySDK(),
 		resource.WithFromEnv(),
-		resource.WithAttributes(
-			semconv.ServiceName(name),
-			semconv.ServiceVersion(version),
-			attribute.String("environment", conf.Environment),
-		),
+		resource.WithAttributes(attrs...),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	var ttp otrace.TracerProvider
 	tp := trace.NewTracerProvider(
 		trace.WithSampler(trace.TraceIDRatioBased(conf.SampleRate)),
 		trace.WithBatcher(exporter),
 		trace.WithResource(res),
 	)
-	TracerProvider = tp
+	var wrapped otrace.TracerProvider = tp
 	if conf.ProfilingEnabled {
-		ttp = otelpyroscope.NewTracerProvider(tp)
-	} else {
-		ttp = tp
+		wrapped = otelpyroscope.NewTracerProvider(tp)
 	}
 
 	otel.SetTextMapPropagator(
@@ -81,7 +89,8 @@ func InitTracer(conf TracingOpts, version string) (*trace.TracerProvider, error)
 			propagation.Baggage{},
 		),
 	)
-	otel.SetTracerProvider(ttp)
+	otel.SetTracerProvider(wrapped)
+	TracerProvider = wrapped
 	return tp, nil
 }
 
