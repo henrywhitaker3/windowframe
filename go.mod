@@ -29,7 +29,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
-	github.com/redis/go-redis/extra/redisotel/v9 v9.22.0
+	github.com/redis/go-redis/extra/redisotel/v9 v9.23.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/redis/rueidis v1.0.78
 	github.com/redis/rueidis/rueidisotel v1.0.78
@@ -144,7 +144,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/prometheus/common v0.72.0 // indirect
 	github.com/prometheus/procfs v0.22.0 // indirect
-	github.com/redis/go-redis/extra/rediscmd/v9 v9.22.0 // indirect
+	github.com/redis/go-redis/extra/rediscmd/v9 v9.23.0 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.6 // indirect
