@@ -2,6 +2,9 @@ package tracing
 
 import (
 	"context"
+	"os"
+	"os/user"
+	"strconv"
 
 	otelpyroscope "github.com/grafana/otel-profiling-go"
 	"go.opentelemetry.io/otel"
@@ -59,16 +62,18 @@ func InitTracer(conf TracingOpts, version string) (*trace.TracerProvider, error)
 		attrs = append(attrs, attribute.String("environment", conf.Environment))
 	}
 
-	res, err := resource.New(
-		context.Background(),
+	resourceOptions := []resource.Option{
 		resource.WithContainer(),
 		resource.WithOS(),
 		resource.WithHost(),
-		resource.WithProcess(),
+	}
+	resourceOptions = append(resourceOptions, processResourceOptions()...)
+	resourceOptions = append(resourceOptions,
 		resource.WithTelemetrySDK(),
 		resource.WithFromEnv(),
 		resource.WithAttributes(attrs...),
 	)
+	res, err := resource.New(context.Background(), resourceOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -92,6 +97,30 @@ func InitTracer(conf TracingOpts, version string) (*trace.TracerProvider, error)
 	otel.SetTracerProvider(wrapped)
 	TracerProvider = wrapped
 	return tp, nil
+}
+
+// processResourceOptions is equivalent to resource.WithProcess, except that
+// process.owner falls back to the process UID when no passwd entry exists.
+// This is common for non-root and scratch containers, where os/user.Current
+// otherwise makes tracing initialization fail.
+func processResourceOptions() []resource.Option {
+	return []resource.Option{
+		resource.WithProcessPID(),
+		resource.WithProcessExecutableName(),
+		resource.WithProcessExecutablePath(),
+		resource.WithProcessCommandArgs(),
+		resource.WithProcessRuntimeName(),
+		resource.WithProcessRuntimeVersion(),
+		resource.WithProcessRuntimeDescription(),
+		resource.WithAttributes(processOwnerAttribute(user.Current, strconv.Itoa(os.Getuid()))),
+	}
+}
+
+func processOwnerAttribute(currentUser func() (*user.User, error), fallback string) attribute.KeyValue {
+	if current, err := currentUser(); err == nil && current.Username != "" {
+		return semconv.ProcessOwner(current.Username)
+	}
+	return semconv.ProcessOwner(fallback)
 }
 
 func NewSpan(
