@@ -31,8 +31,8 @@ require (
 	github.com/prometheus/client_model v0.6.3
 	github.com/redis/go-redis/extra/redisotel/v9 v9.23.0
 	github.com/redis/go-redis/v9 v9.23.0
-	github.com/redis/rueidis v1.0.78
-	github.com/redis/rueidis/rueidisotel v1.0.78
+	github.com/redis/rueidis v1.0.79
+	github.com/redis/rueidis/rueidisotel v1.0.79
 	github.com/sethvargo/go-envconfig/v2 v2.0.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.12.1
