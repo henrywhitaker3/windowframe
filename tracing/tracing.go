@@ -2,11 +2,13 @@ package tracing
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"os/user"
 	"strconv"
 
 	otelpyroscope "github.com/grafana/otel-profiling-go"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -96,6 +98,9 @@ func InitTracer(conf TracingOpts, version string) (*trace.TracerProvider, error)
 	)
 	otel.SetTracerProvider(wrapped)
 	TracerProvider = wrapped
+
+	instrumentHTTPClient()
+
 	return tp, nil
 }
 
@@ -116,7 +121,10 @@ func processResourceOptions() []resource.Option {
 	}
 }
 
-func processOwnerAttribute(currentUser func() (*user.User, error), fallback string) attribute.KeyValue {
+func processOwnerAttribute(
+	currentUser func() (*user.User, error),
+	fallback string,
+) attribute.KeyValue {
 	if current, err := currentUser(); err == nil && current.Username != "" {
 		return semconv.ProcessOwner(current.Username)
 	}
@@ -146,4 +154,13 @@ func TraceID(ctx context.Context) string {
 		return span.SpanContext().TraceID().String()
 	}
 	return ""
+}
+
+func instrumentHTTPClient() {
+	http.DefaultClient.Transport = otelhttp.NewTransport(
+		http.DefaultTransport,
+		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+			return r.Method + " " + r.URL.Path
+		}),
+	)
 }
