@@ -25,6 +25,7 @@ import (
 	"github.com/swaggest/jsonschema-go"
 	"github.com/swaggest/openapi-go"
 	"github.com/swaggest/openapi-go/openapi3"
+	"gorm.io/gorm"
 )
 
 type SpecMutator func(*openapi3.Reflector)
@@ -369,6 +370,8 @@ func (h *HTTP) getErrorCodeAndResponse(err error) (int, any, bool) {
 	case errors.Is(err, pgx.ErrNoRows):
 		return http.StatusNotFound, NewError("not found"), true
 	case errors.Is(err, sql.ErrNoRows):
+		return http.StatusNotFound, NewError("not found"), true
+	case errors.Is(err, gorm.ErrRecordNotFound):
 		return http.StatusNotFound, NewError("not found"), true
 
 	case errors.Is(err, httperrors.ErrValidation):
