@@ -11,9 +11,7 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-type LogAttributesFunc = func(context.Context, *slog.Logger) *slog.Logger
-
-func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
+func LoggerAt(level slog.Level, mut ...LogAttributesFunc) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c *echo.Context) error {
 			start := time.Now()
@@ -51,10 +49,16 @@ func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
 					logger = logger.With("error", err.Error())
 				}
 			}
-			logger.InfoContext(ctx, "request")
+			logAt(ctx, level, logger, "request")
 			return nil
 		}
 	}
+}
+
+type LogAttributesFunc = func(context.Context, *slog.Logger) *slog.Logger
+
+func Logger(mut ...LogAttributesFunc) echo.MiddlewareFunc {
+	return LoggerAt(slog.LevelInfo, mut...)
 }
 
 func bytesIn(c *echo.Context) string {
@@ -71,4 +75,19 @@ func responseStatusAndSize(c *echo.Context) (int, int64) {
 		return 0, 0
 	}
 	return resp.Status, resp.Size
+}
+
+func logAt(ctx context.Context, level slog.Level, logger *slog.Logger, msg string, args ...any) {
+	switch level {
+	case slog.LevelError:
+		logger.ErrorContext(ctx, msg, args...)
+	case slog.LevelWarn:
+		logger.WarnContext(ctx, msg, args...)
+	case slog.LevelDebug:
+		logger.DebugContext(ctx, msg, args...)
+	case slog.LevelInfo:
+		fallthrough
+	default:
+		logger.InfoContext(ctx, msg, args...)
+	}
 }
