@@ -142,7 +142,7 @@ You can also build one by hand in middleware — `validation.Build().With("field
 
 ## OpenAPI
 
-With `Openapi.Enabled`, the server serves Swagger UI at `/docs/*` and the spec
+With `Openapi.Enabled`, the server serves Scalar API Reference at `/docs/*` and the spec
 at `/docs/schema.yaml`. The spec is marshalled during `Start`, so **all handlers
 must be registered before calling `Start`**.
 
