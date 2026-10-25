@@ -24,6 +24,7 @@ type Metadata struct {
 	Name         string
 	Description  string
 	Tag          string
+	ID           *string
 	Code         int
 	Method       string
 	Path         string

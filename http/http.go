@@ -279,6 +279,9 @@ func buildSchema[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) error {
 		resp,
 		openapi.WithHTTPStatus(handler.Metadata().Code),
 	)
+	if id := handler.Metadata().ID; id != nil {
+		opctx.SetID(*id)
+	}
 	opctx.SetTags(handler.Metadata().Tag)
 	opctx.SetSummary(handler.Metadata().Name)
 	if handler.Metadata().Description != "" {
