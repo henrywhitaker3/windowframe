@@ -232,13 +232,15 @@ func wrapHandler[Req any, Resp any](
 		}
 		span.End()
 
-		_, span = tracing.NewSpan(c.Request().Context(), "ValidateRequest")
-		defer span.End()
-		if err := ht.Validator.Validate(req); err != nil {
-			code, resp, _ := ht.getErrorCodeAndResponse(err)
-			return c.JSON(code, resp)
+		if !h.Metadata().SkipValidation {
+			_, span = tracing.NewSpan(c.Request().Context(), "ValidateRequest")
+			defer span.End()
+			if err := ht.Validator.Validate(req); err != nil {
+				code, resp, _ := ht.getErrorCodeAndResponse(err)
+				return c.JSON(code, resp)
+			}
+			span.End()
 		}
-		span.End()
 
 		resp, err := handler(c, req)
 		if err != nil {

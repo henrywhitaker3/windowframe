@@ -21,15 +21,16 @@ type Auth struct {
 }
 
 type Metadata struct {
-	Name         string
-	Description  string
-	Tag          string
-	ID           *string
-	Code         int
-	Method       string
-	Path         string
-	GenerateSpec bool
-	Kind         ResponseKind
-	Auth         Auth
-	Extras       map[string]any
+	Name           string
+	Description    string
+	Tag            string
+	ID             *string
+	Code           int
+	Method         string
+	Path           string
+	GenerateSpec   bool
+	Kind           ResponseKind
+	Auth           Auth
+	Extras         map[string]any
+	SkipValidation bool
 }
