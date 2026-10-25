@@ -23,9 +23,9 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/labstack/echo-contrib/v5 v5.0.1
 	github.com/labstack/echo-otel/v5 v5.0.0
-	github.com/labstack/echo/v5 v5.4.0
+	github.com/labstack/echo/v5 v5.4.2
 	github.com/moby/moby/api v1.56.1
-	github.com/nats-io/nats.go v1.54.0
+	github.com/nats-io/nats.go v1.55.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
@@ -43,7 +43,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/nats v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.44.0
 	github.com/thanos-io/objstore v0.0.0-20261009124658-72d3b9ff63af
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.47.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.47.0
