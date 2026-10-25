@@ -80,6 +80,10 @@ func InitTracer(conf TracingOpts, version string) (*trace.TracerProvider, error)
 		return nil, err
 	}
 
+	if conf.SampleRate == 0 {
+		conf.SampleRate = 1
+	}
+
 	tp := trace.NewTracerProvider(
 		trace.WithSampler(trace.TraceIDRatioBased(conf.SampleRate)),
 		trace.WithBatcher(exporter),
