@@ -38,7 +38,7 @@ type OpenapiOpts struct {
 	ServiceVersion string
 	PublicURL      string
 
-	BearerAuth []struct {
+	AuthConfig []struct {
 		Enabled     bool
 		Name        string
 		Format      string
@@ -62,6 +62,7 @@ type HTTP struct {
 	logger         log.Logger
 	port           int
 	openapiEnabled bool
+	authEnabled    bool
 
 	cancel context.CancelFunc
 	done   chan struct{}
@@ -74,13 +75,14 @@ type HTTP struct {
 func New(opts HTTPOpts) *HTTP {
 	e := echo.New()
 
-	r := openapi3.Reflector{}
-	r.Spec = &openapi3.Spec{Openapi: "3.0.3"}
+	r := openapi3.Reflector{
+		Spec: &openapi3.Spec{Openapi: "3.0.3"},
+	}
 	r.Spec.Info.WithTitle(opts.Openapi.ServiceName).WithVersion(opts.Openapi.ServiceVersion)
 	r.Spec.Servers = append(r.Spec.Servers, openapi3.Server{
 		URL: opts.Openapi.PublicURL,
 	})
-	for _, b := range opts.Openapi.BearerAuth {
+	for _, b := range opts.Openapi.AuthConfig {
 		r.Spec.SetHTTPBearerTokenSecurity(b.Name, b.Format, b.Description)
 	}
 	if opts.Logger == nil {
@@ -98,6 +100,7 @@ func New(opts HTTPOpts) *HTTP {
 		openapiEnabled: opts.Openapi.Enabled,
 		logger:         opts.Logger,
 		handleErrors:   []ErrorHandler{},
+		authEnabled:    len(opts.Openapi.AuthConfig) > 0,
 	}
 
 	h.e.HTTPErrorHandler = h.handleError
@@ -304,8 +307,16 @@ func buildSchema[Req any, Resp any](h *HTTP, handler Handler[Req, Resp]) error {
 		NewError("forbidden"),
 		openapi.WithHTTPStatus(http.StatusForbidden),
 	)
-	if handler.Metadata().Auth.Enabled {
-		opctx.AddSecurity(handler.Metadata().Auth.Name, handler.Metadata().Auth.Scopes...)
+	if h.authEnabled {
+		for _, a := range handler.Metadata().Auths {
+			if a.Enabled {
+				opctx.AddSecurity(a.Name, a.Scopes...)
+			}
+		}
+		if handler.Metadata().AuthOptional {
+			operation := opctx.(openapi3.OperationExposer).Operation()
+			operation.Security = append(operation.Security, map[string][]string{})
+		}
 	}
 
 	return h.spec.AddOperation(opctx)

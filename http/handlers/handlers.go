@@ -30,7 +30,8 @@ type Metadata struct {
 	Path           string
 	GenerateSpec   bool
 	Kind           ResponseKind
-	Auth           Auth
+	Auths          []Auth
+	AuthOptional   bool
 	Extras         map[string]any
 	SkipValidation bool
 }
