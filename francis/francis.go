@@ -25,6 +25,7 @@ type Peeker interface {
 		ctx context.Context,
 		kind string,
 		id string,
+		method string,
 		data any,
 		opts ...actor.InvokeOption,
 	) (actor.Envelope, error)
