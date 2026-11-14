@@ -21,7 +21,7 @@ require (
 	github.com/henrywhitaker3/rueidisleader v1.0.7
 	github.com/hibiken/asynq v0.26.0
 	github.com/italypaleale/francis v0.2.2
-	github.com/jackc/pgx/v5 v5.12.0
+	github.com/jackc/pgx/v5 v5.13.0
 	github.com/labstack/echo-contrib/v5 v5.0.1
 	github.com/labstack/echo-otel/v5 v5.0.0
 	github.com/labstack/echo/v5 v5.4.4
