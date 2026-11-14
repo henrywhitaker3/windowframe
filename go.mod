@@ -42,7 +42,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/nats v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.45.0
-	github.com/thanos-io/objstore v0.0.0-20261030234810-710b1835d118
+	github.com/thanos-io/objstore v0.0.0-20261113210429-d0d39385c336
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.47.0
