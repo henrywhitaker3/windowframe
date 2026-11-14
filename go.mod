@@ -35,7 +35,7 @@ require (
 	github.com/redis/rueidis v1.0.79
 	github.com/redis/rueidis/rueidisotel v1.0.79
 	github.com/sethvargo/go-envconfig/v2 v2.0.0
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
 	github.com/swaggest/jsonschema-go v0.3.79
 	github.com/swaggest/openapi-go v0.2.61
