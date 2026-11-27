@@ -53,3 +53,11 @@ type Dispatcher interface {
 		opts ...actor.JobOption,
 	) (jobID string, created bool, err error)
 }
+
+type JobLister interface {
+	ListJobs(ctx context.Context, actorType string, actorID string) ([]actor.JobInfo, error)
+}
+
+type JobStatusGetter interface {
+	GetJob(ctx context.Context, id string) (actor.JobInfo, error)
+}
