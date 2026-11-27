@@ -368,8 +368,8 @@ github.com/redis/go-redis/extra/rediscmd/v9 v9.24.0 h1:gWs+ml481cQtddqKTMQZGkCtf
 github.com/redis/go-redis/extra/rediscmd/v9 v9.24.0/go.mod h1:+gZSjEd82iY0sjNw5tx0xIgnnBK9wrGQQjJcvX90Cts=
 github.com/redis/go-redis/extra/redisotel/v9 v9.24.0 h1:H5cP0vML2PKV0R/vZkds/yS2bnXOvsb03pxvtFgKVFM=
 github.com/redis/go-redis/extra/redisotel/v9 v9.24.0/go.mod h1:UoKpuOc+m3fA5L4BY7DmuOVjFqbnaPRtVPJO84fr9do=
-github.com/redis/go-redis/v9 v9.24.0 h1:X1AnQHWaSfMeggDQm7UFad1YwJmoZxVm5XkaP0kr6nQ=
-github.com/redis/go-redis/v9 v9.24.0/go.mod h1:ted97kpLnB4S2KJkTkw+7GzRjgkFnU909IIrksu+ut4=
+github.com/redis/go-redis/v9 v9.24.1 h1:WZ9a1QO2mkLFLYyQ1IPFvS4xBuCuZy9eXtIxppdj/Z0=
+github.com/redis/go-redis/v9 v9.24.1/go.mod h1:ted97kpLnB4S2KJkTkw+7GzRjgkFnU909IIrksu+ut4=
 github.com/redis/rueidis v1.0.80 h1:/vVSk3kO3wU7xCkyfzHdFAaGTKyu+XU7tO5K+g+7CZs=
 github.com/redis/rueidis v1.0.80/go.mod h1:lczrf+WTjpMDF3R53dLM1TMCrwMtsg2Tcea3RX4Za4w=
 github.com/redis/rueidis/rueidisotel v1.0.80 h1:RZDt8c43CBmpGD9EY/N+bbuOL2wrzB2d4CmQCncaFmA=
