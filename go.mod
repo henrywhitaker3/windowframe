@@ -33,7 +33,7 @@ require (
 	github.com/redis/go-redis/extra/redisotel/v9 v9.23.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/redis/rueidis v1.0.80
-	github.com/redis/rueidis/rueidisotel v1.0.79
+	github.com/redis/rueidis/rueidisotel v1.0.80
 	github.com/sethvargo/go-envconfig/v2 v2.0.0
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1

@@ -372,8 +372,8 @@ github.com/redis/go-redis/v9 v9.23.0 h1:/TTVdJa8BRNsybwwGGnmiYktHNlUXtbOQxlWpHBP
 github.com/redis/go-redis/v9 v9.23.0/go.mod h1:EWP2UUk+XDaI1s5nQB5mablZN6vccXlmBQTyfnF87D0=
 github.com/redis/rueidis v1.0.80 h1:/vVSk3kO3wU7xCkyfzHdFAaGTKyu+XU7tO5K+g+7CZs=
 github.com/redis/rueidis v1.0.80/go.mod h1:lczrf+WTjpMDF3R53dLM1TMCrwMtsg2Tcea3RX4Za4w=
-github.com/redis/rueidis/rueidisotel v1.0.79 h1:+zrNa9yBMj44qr0YX17yjvSvraLBht9zaQuJJMqX9wc=
-github.com/redis/rueidis/rueidisotel v1.0.79/go.mod h1:sL9cm6nxjj8GVUY2ltK9r53FMW3haTcs9kLB3eBsHKs=
+github.com/redis/rueidis/rueidisotel v1.0.80 h1:RZDt8c43CBmpGD9EY/N+bbuOL2wrzB2d4CmQCncaFmA=
+github.com/redis/rueidis/rueidisotel v1.0.80/go.mod h1:pUyIIp8xhFdVe9RkW3nUrfc2Kt8nBQfLy3K2KxjfHy4=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec h1:W09IVJc94icq4NjY3clb7Lk8O1qJ8BdBEF8z0ibU0rE=
 github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
